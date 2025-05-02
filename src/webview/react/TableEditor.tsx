@@ -1,6 +1,7 @@
 // src/webview/react/TableEditor.tsx
 import React, { useState } from "react";
 
+
 export const TableEditor: React.FC = () => {
   const [tableData, setTableData] = useState([
     ["Header1", "Header2"],
@@ -8,8 +9,8 @@ export const TableEditor: React.FC = () => {
   ]);
 
   return (
-    <div>
-      <table>
+    <div className="tableEditor">
+      <table className="tableEditorTable">
         <tbody>
           {tableData.map((row, rowIdx) => (
             <tr key={rowIdx}>
@@ -22,7 +23,7 @@ export const TableEditor: React.FC = () => {
           ))}
         </tbody>
       </table>
-      <div style={{ marginTop: 8 }}>
+      <div className="tableEditorButtons">
         <button>行追加</button>
         <button>列追加</button>
         <button>行削除</button>
