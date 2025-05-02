@@ -1,28 +1,31 @@
 // src/webview/react/TableEditor.tsx
-import React, { useState } from "react";
+import React, { useRef } from "react";
+import Grid from "@toast-ui/react-grid";
+import "tui-grid/dist/tui-grid.min.css";
 
+const columns = [
+  { name: "col1", header: "Header1", editor: "text" },
+  { name: "col2", header: "Header2", editor: "text" },
+];
+
+const data = [
+  { col1: "Cell1", col2: "Cell2" },
+  { col1: "Cell3", col2: "Cell4" },
+];
 
 export const TableEditor: React.FC = () => {
-  const [tableData, setTableData] = useState([
-    ["Header1", "Header2"],
-    ["Cell1", "Cell2"],
-  ]);
+  const gridRef = useRef<any>(null);
 
   return (
     <div className="tableEditor">
-      <table className="tableEditorTable">
-        <tbody>
-          {tableData.map((row, rowIdx) => (
-            <tr key={rowIdx}>
-              {row.map((cell, colIdx) => (
-                <td key={colIdx} contentEditable suppressContentEditableWarning>
-                  {cell}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <Grid
+        ref={gridRef}
+        columns={columns}
+        data={data}
+        rowHeaders={["rowNum"]}
+        bodyHeight={200}
+        heightResizable={true}
+      />
       <div className="tableEditorButtons">
         <button>行追加</button>
         <button>列追加</button>
