@@ -83,9 +83,29 @@ export const TableEditor: React.FC = () => {
   // 初期Markdownデータをstateにセット
   const initialMarkdown = window.__INIT_MARKDOWN__ || "";
   const [markdown, setMarkdown] = useState(initialMarkdown);
+  const [isModified, setIsModified] = useState(false);
 
   // markdownからcolumns/dataを生成
   const { columns, data } = React.useMemo(() => parseMarkdownTable(markdown), [markdown]);
+
+  // 編集検知: GridインスタンスのafterChangeイベントで検知
+  useEffect(() => {
+    const gridInst = gridRef.current?.getInstance?.();
+    if (!gridInst) return;
+    const handler = () => {
+      if (!isModified) {
+        setIsModified(true);
+        if (window.vscode && typeof window.vscode.postMessage === "function") {
+          window.vscode.postMessage({ type: "modified" });
+        }
+      }
+    };
+    gridInst.on('afterChange', handler);
+    return () => {
+      gridInst.off('afterChange', handler);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isModified, columns.length, data.length]);
 
   // 保存処理
   const handleSave = () => {
@@ -95,7 +115,9 @@ export const TableEditor: React.FC = () => {
     const md = toMarkdownTable(columns, currentData);
     if (window.vscode && typeof window.vscode.postMessage === "function") {
       window.vscode.postMessage({ type: "save", markdown: md });
+      window.vscode.postMessage({ type: "saved" });
     }
+    setIsModified(false);
   };
 
   // Cmd+S/Ctrl+S ショートカット対応
@@ -112,6 +134,7 @@ export const TableEditor: React.FC = () => {
 
   useEffect(() => {
     setMarkdown(initialMarkdown);
+    setIsModified(false);
   }, []);
 
   return (

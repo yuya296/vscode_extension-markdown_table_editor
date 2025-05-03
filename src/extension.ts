@@ -109,6 +109,12 @@ export function activate(context: vscode.ExtensionContext) {
           vscode.window.showErrorMessage('保存時に編集対象のMarkdownドキュメント情報が取得できません');
         }
         // panel.dispose(); // 仕様により保存後もWebviewは閉じない
+      } else if (message.type === 'modified') {
+        if (!panel.title.endsWith(' [Modified]')) {
+          panel.title = panel.title + ' [Modified]';
+        }
+      } else if (message.type === 'saved') {
+        panel.title = panel.title.replace(/ ?\[Modified\]$/, '');
       } else {
         vscode.window.showInformationMessage('onDidReceiveMessage (other): ' + JSON.stringify(message));
       }
