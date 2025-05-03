@@ -48,6 +48,8 @@
     "watch": "tsc -watch -p ./",
     "build:webview": "node ./esbuild.webview.mjs",
     "watch:webview": "node ./esbuild.webview.mjs --watch",
+    "build": "npm run compile && npm run build:webview",
+    "dev": "concurrently \"npm run watch\" \"npm run watch:webview\"",
     "pretest": "npm run compile",
     "test": "node ./out/test/runTest.js"
   },
@@ -63,6 +65,7 @@
     "@types/react": "^18.0.0",
     "@types/react-dom": "^18.0.0",
     "@types/vscode": "^1.70.0",
+    "concurrently": "^8.2.2",
     "esbuild": "^0.25.3",
     "esbuild-sass-plugin": "^3.3.1",
     "tslint": "^6.1.3",
