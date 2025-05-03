@@ -12,7 +12,8 @@
   ],
   "activationEvents": [
     "onCommand:markdown-table-editor.addTable",
-    "onCommand:markdown-table-editor.editTable"
+    "onCommand:markdown-table-editor.editTable",
+    "onLanguage:markdown"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -52,6 +53,7 @@
   },
   "dependencies": {
     "@toast-ui/react-grid": "^4.21.22",
+    "marked": "^15.0.11",
     "react": "^18.0.0",
     "react-dom": "^18.0.0",
     "tui-grid": "^4.21.22"
