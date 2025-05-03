@@ -120,6 +120,18 @@ export const TableEditor: React.FC = () => {
     setIsModified(false);
   };
 
+  // Save & Closeボタン処理
+  const handleSaveAndClose = () => {
+    if (!gridRef.current) return;
+    const gridInst = gridRef.current.getInstance();
+    const currentData = gridInst.getData();
+    const md = toMarkdownTable(columns, currentData);
+    if (window.vscode && typeof window.vscode.postMessage === "function") {
+      window.vscode.postMessage({ type: "saveAndClose", markdown: md });
+    }
+    setIsModified(false);
+  };
+
   // Cmd+S/Ctrl+S ショートカット対応
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -148,7 +160,8 @@ export const TableEditor: React.FC = () => {
           heightResizable={true}
         />
         <div className="tableEditorButtons">
-          <ToastButton onClick={handleSave}>保存</ToastButton>
+          <ToastButton onClick={handleSave}>Save</ToastButton>
+          <ToastButton onClick={handleSaveAndClose}>Save & Close</ToastButton>
         </div>
       </div>
     </div>

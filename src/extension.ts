@@ -89,7 +89,7 @@ export function activate(context: vscode.ExtensionContext) {
     // Webviewからのメッセージ受信
     panel.webview.onDidReceiveMessage(async (message) => {
       vscode.window.showInformationMessage('onDidReceiveMessage: ' + JSON.stringify(message));
-      if (message.type === 'save' && message.markdown) {
+      if ((message.type === 'save' || message.type === 'saveAndClose') && message.markdown) {
         // 保存時点でWebview起動時のエディタ情報を利用
         if (initialUri) {
           const doc = await vscode.workspace.openTextDocument(initialUri);
@@ -107,6 +107,9 @@ export function activate(context: vscode.ExtensionContext) {
           );
         } else {
           vscode.window.showErrorMessage('保存時に編集対象のMarkdownドキュメント情報が取得できません');
+        }
+        if (message.type === 'saveAndClose') {
+          panel.dispose();
         }
         // panel.dispose(); // 仕様により保存後もWebviewは閉じない
       } else if (message.type === 'modified') {
