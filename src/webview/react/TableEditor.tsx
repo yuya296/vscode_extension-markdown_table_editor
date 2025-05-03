@@ -4,7 +4,6 @@ declare function acquireVsCodeApi(): any;
 if (typeof window !== "undefined" && !window.vscode && typeof acquireVsCodeApi === "function") {
   window.vscode = acquireVsCodeApi();
 }
-// VSCode API用のwindow.vscode型宣言
 declare global {
   interface Window {
     vscode: {
@@ -12,9 +11,7 @@ declare global {
     };
   }
 }
-// デバッグ用: 初期Markdownデータを確認
 
-// src/webview/react/TableEditor.tsx
 import React, { useRef, useState, useEffect } from "react";
 import Grid from "@toast-ui/react-grid";
 import "tui-grid/dist/tui-grid.min.css";
@@ -107,7 +104,6 @@ export const TableEditor: React.FC = () => {
     return () => {
       gridInst.off('afterChange', handler);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isModified, columns.length, data.length]);
 
   // 保存処理

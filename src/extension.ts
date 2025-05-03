@@ -1,4 +1,3 @@
-// src/extension.ts
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -88,7 +87,6 @@ export function activate(context: vscode.ExtensionContext) {
     // Webview初期化用のスクリプトを埋め込む
     // Webviewからのメッセージ受信
     panel.webview.onDidReceiveMessage(async (message) => {
-      vscode.window.showInformationMessage('onDidReceiveMessage: ' + JSON.stringify(message));
       if ((message.type === 'save' || message.type === 'saveAndClose') && message.markdown) {
         // 保存時点でWebview起動時のエディタ情報を利用
         if (initialUri) {
@@ -101,25 +99,19 @@ export function activate(context: vscode.ExtensionContext) {
             return;
           }
           edit.replace(initialUri, replaceRange, message.markdown);
-          const result = await vscode.workspace.applyEdit(edit);
-          vscode.window.showInformationMessage(
-            `applyEdit result: ${result}, uri: ${initialUri.fsPath}, range: ${replaceRange.start.line}:${replaceRange.start.character}`
-          );
+          await vscode.workspace.applyEdit(edit);
         } else {
           vscode.window.showErrorMessage('保存時に編集対象のMarkdownドキュメント情報が取得できません');
         }
         if (message.type === 'saveAndClose') {
           panel.dispose();
         }
-        // panel.dispose(); // 仕様により保存後もWebviewは閉じない
       } else if (message.type === 'modified') {
         if (!panel.title.endsWith(' [Modified]')) {
           panel.title = panel.title + ' [Modified]';
         }
       } else if (message.type === 'saved') {
         panel.title = panel.title.replace(/ ?\[Modified\]$/, '');
-      } else {
-        vscode.window.showInformationMessage('onDidReceiveMessage (other): ' + JSON.stringify(message));
       }
     });
 
@@ -176,7 +168,6 @@ class TableEditCodeLensProvider implements vscode.CodeLensProvider {
   readonly onDidChangeCodeLenses = this._onDidChangeCodeLenses.event;
 
   provideCodeLenses(document: any): vscode.CodeLens[] {
-    // デバッグ: CodeLensProviderの呼び出し状況を確認
     const codeLenses: vscode.CodeLens[] = [];
     const text = document.getText();
 
