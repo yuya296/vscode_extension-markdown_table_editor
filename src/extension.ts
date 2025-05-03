@@ -70,15 +70,16 @@ export function activate(context: vscode.ExtensionContext) {
     const initialUri = initialEditor?.document.uri;
     const initialSelection = initialEditor?.selection;
 
-    // テーブル範囲指定があればその部分を取得、なければ選択範囲
+    // テーブル範囲指定があればその範囲を保存
+    let tableRange: vscode.Range | undefined = undefined;
     let selectedText = '';
     const editor = vscode.window.activeTextEditor;
     if (editor) {
       if (rangeArg && typeof rangeArg.startLine === 'number' && typeof rangeArg.endLine === 'number') {
         const start = new vscode.Position(rangeArg.startLine, 0);
         const end = new vscode.Position(rangeArg.endLine + 1, 0);
-        const range = new vscode.Range(start, end);
-        selectedText = editor.document.getText(range);
+        tableRange = new vscode.Range(start, end);
+        selectedText = editor.document.getText(tableRange);
       } else {
         selectedText = editor.document.getText(editor.selection);
       }
@@ -90,23 +91,24 @@ export function activate(context: vscode.ExtensionContext) {
       vscode.window.showInformationMessage('onDidReceiveMessage: ' + JSON.stringify(message));
       if (message.type === 'save' && message.markdown) {
         // 保存時点でWebview起動時のエディタ情報を利用
-        if (initialUri && initialSelection) {
+        if (initialUri) {
           const doc = await vscode.workspace.openTextDocument(initialUri);
           const edit = new vscode.WorkspaceEdit();
-          let selection = initialSelection;
-          // 選択範囲が空ならカーソル位置に挿入
-          if (selection.isEmpty) {
-            selection = new vscode.Selection(selection.start, selection.start);
+          // テーブル範囲があればそこを置換、なければ選択範囲
+          let replaceRange = tableRange ?? initialSelection;
+          if (!replaceRange) {
+            vscode.window.showErrorMessage('保存時に編集対象範囲が取得できません');
+            return;
           }
-          edit.replace(initialUri, selection, message.markdown);
+          edit.replace(initialUri, replaceRange, message.markdown);
           const result = await vscode.workspace.applyEdit(edit);
           vscode.window.showInformationMessage(
-            `applyEdit result: ${result}, uri: ${initialUri.fsPath}, selection: ${selection.start.line}:${selection.start.character}`
+            `applyEdit result: ${result}, uri: ${initialUri.fsPath}, range: ${replaceRange.start.line}:${replaceRange.start.character}`
           );
         } else {
           vscode.window.showErrorMessage('保存時に編集対象のMarkdownドキュメント情報が取得できません');
         }
-        panel.dispose();
+        // panel.dispose(); // 仕様により保存後もWebviewは閉じない
       } else {
         vscode.window.showInformationMessage('onDidReceiveMessage (other): ' + JSON.stringify(message));
       }

@@ -1,3 +1,17 @@
+// VSCode Webview API型宣言
+declare function acquireVsCodeApi(): any;
+// VSCode Webview APIをwindow.vscodeにセット
+if (typeof window !== "undefined" && !window.vscode && typeof acquireVsCodeApi === "function") {
+  window.vscode = acquireVsCodeApi();
+}
+// VSCode API用のwindow.vscode型宣言
+declare global {
+  interface Window {
+    vscode: {
+      postMessage: (msg: any) => void;
+    };
+  }
+}
 // デバッグ用: 初期Markdownデータを確認
 
 // src/webview/react/TableEditor.tsx
@@ -50,6 +64,19 @@ const ToastButton: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement>> = ({ 
 );
 
 
+/**
+ * データ→Markdown変換
+ */
+function toMarkdownTable(columns: any[], data: any[]): string {
+  if (!columns.length) return "";
+  const header = "|" + columns.map((col: any) => col.header).join("|") + "|";
+  const sep = "|" + columns.map(() => "---").join("|") + "|";
+  const rows = data.map(row =>
+    "|" + columns.map((col: any) => (row[col.name] ?? "")).join("|") + "|"
+  );
+  return [header, sep, ...rows].join("\n");
+}
+
 export const TableEditor: React.FC = () => {
   const gridRef = useRef<any>(null);
 
@@ -59,6 +86,29 @@ export const TableEditor: React.FC = () => {
 
   // markdownからcolumns/dataを生成
   const { columns, data } = React.useMemo(() => parseMarkdownTable(markdown), [markdown]);
+
+  // 保存処理
+  const handleSave = () => {
+    if (!gridRef.current) return;
+    const gridInst = gridRef.current.getInstance();
+    const currentData = gridInst.getData();
+    const md = toMarkdownTable(columns, currentData);
+    if (window.vscode && typeof window.vscode.postMessage === "function") {
+      window.vscode.postMessage({ type: "save", markdown: md });
+    }
+  };
+
+  // Cmd+S/Ctrl+S ショートカット対応
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "s") {
+        e.preventDefault();
+        handleSave();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  });
 
   useEffect(() => {
     setMarkdown(initialMarkdown);
@@ -75,13 +125,7 @@ export const TableEditor: React.FC = () => {
           heightResizable={true}
         />
         <div className="tableEditorButtons">
-          <ToastButton>行追加</ToastButton>
-          <ToastButton>列追加</ToastButton>
-          <ToastButton>行削除</ToastButton>
-          <ToastButton>列削除</ToastButton>
-          <ToastButton>元に戻す</ToastButton>
-          <ToastButton>やり直し</ToastButton>
-          <ToastButton>保存</ToastButton>
+          <ToastButton onClick={handleSave}>保存</ToastButton>
         </div>
       </div>
     </div>
