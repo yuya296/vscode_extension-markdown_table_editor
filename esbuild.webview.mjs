@@ -7,7 +7,7 @@ build({
   outfile: "src/webview/main.js",
   minify: true,
   sourcemap: true,
-  plugins: [sassPlugin({ type: "style", cssModules: true })],
+  plugins: [sassPlugin({ type: "css", cssModules: false })],
   loader: { ".png": "file", ".svg": "file" },
   logLevel: "info",
 }).catch(() => process.exit(1));
