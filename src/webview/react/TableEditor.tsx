@@ -35,7 +35,7 @@ const data = [
 ];
 
 export const TableEditor: React.FC = () => {
-  const gridRef = useRef<any>(null);
+  const gridRef = useRef<GridInstance | null>(null);
 
   return (
     <div className="tableEditor">
