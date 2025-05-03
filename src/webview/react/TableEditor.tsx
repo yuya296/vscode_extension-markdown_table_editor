@@ -104,7 +104,7 @@ export const TableEditor: React.FC = () => {
     return () => {
       gridInst.off('afterChange', handler);
     };
-  }, [isModified, columns.length, data.length]);
+  }, [isModified]);
 
   // 保存処理
   const handleSave = () => {
