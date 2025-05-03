@@ -148,6 +148,30 @@ export const TableEditor: React.FC = () => {
     setIsModified(false);
   }, []);
 
+  // 行追加
+  const handleAddRow = () => {
+    const gridInst = gridRef.current?.getInstance?.();
+    if (!gridInst) return;
+    gridInst.appendRow({});
+    setIsModified(true);
+  };
+
+  // 列追加
+  const handleAddColumn = () => {
+    // 新しい列名
+    const newColIdx = columns.length + 1;
+    const newColName = `col${newColIdx}`;
+    const newColHeader = `Column${newColIdx}`;
+    // columns/dataを再構築
+    const newColumns = [
+      ...columns,
+      { name: newColName, header: newColHeader, editor: 'text' }
+    ];
+    const newData = data.map(row => ({ ...row, [newColName]: "" }));
+    setMarkdown(toMarkdownTable(newColumns, newData));
+    setIsModified(true);
+  };
+
   return (
     <div>
       <div className="tableEditor">
@@ -159,6 +183,8 @@ export const TableEditor: React.FC = () => {
           heightResizable={true}
         />
         <div className="tableEditorButtons">
+          <ToastButton onClick={handleAddRow}>行を追加</ToastButton>
+          <ToastButton onClick={handleAddColumn}>列を追加</ToastButton>
           <ToastButton onClick={handleSave} disabled={!isModified}>Save</ToastButton>
           <ToastButton onClick={handleSaveAndClose} disabled={!isModified}>Save & Close</ToastButton>
         </div>
