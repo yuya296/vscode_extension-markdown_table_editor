@@ -4,78 +4,10 @@
   <meta charset="UTF-8">
   <title>Markdown Table Editor</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    body {
-      font-family: 'Segoe UI', 'Yu Gothic', sans-serif;
-      background: #fafbfc;
-      color: #222;
-      margin: 32px;
-      line-height: 1.7;
-    }
-    h2 {
-      margin-bottom: 8px;
-      font-size: 1.3em;
-      color: #2d5a8c;
-      font-weight: 600;
-    }
-    .toolbar {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 18px;
-    }
-    .toolbar button {
-      background: #f3f6fa;
-      border: 1px solid #b5c6d6;
-      border-radius: 4px;
-      padding: 5px 14px;
-      font-size: 1em;
-      color: #2d5a8c;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-    .toolbar button:hover {
-      background: #e2eaf3;
-    }
-    #table-editor-root {
-      margin-top: 8px;
-    }
-    table {
-      border-collapse: collapse;
-      background: #fff;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.04);
-      width: auto;
-      min-width: 240px;
-    }
-    th, td {
-      border: 1px solid #b5c6d6;
-      padding: 8px 16px;
-      min-width: 70px;
-      text-align: left;
-      font-size: 1em;
-      background: #fff;
-    }
-    th {
-      background: #f3f6fa;
-      font-weight: 600;
-      color: #2d5a8c;
-    }
-    td:focus {
-      outline: 2px solid #2d5a8c;
-      background: #eaf2fb;
-    }
-  </style>
+  <link rel="stylesheet" href="main.css">
 </head>
 <body>
   <h2>Markdown Table Editor</h2>
-  <div class="toolbar">
-    <button id="add-row">行追加</button>
-    <button id="add-col">列追加</button>
-    <button id="del-row">行削除</button>
-    <button id="del-col">列削除</button>
-    <button id="undo">Undo</button>
-    <button id="redo">Redo</button>
-    <button id="save">保存</button>
-  </div>
   <div id="table-editor-root"></div>
   <script src="main.js"></script>
 </body>

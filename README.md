@@ -21,8 +21,15 @@ VSCode上でMarkdownテーブルをExcelライクなUIで直感的に編集で�
 
 1. このリポジトリをクローン
 2. `npm install`
-3. `npm run compile` でビルド
-4. VSCodeで「Run Extension」または「拡張機能のデバッグ」を実行
+3. `npm run build:webview` でReactフロントエンドをビルド
+4. `npm run compile` で拡張本体をビルド
+5. VSCodeで「Run Extension」または「拡張機能のデバッグ」を実行
+
+### フロントエンド開発
+
+- `src/webview/react/`配下がReactアプリです。
+- `npm run watch:webview` でReact部分を自動ビルドできます（src/webview/main.jsに出力）。
+- main.jsはReactビルド成果物です。直接編集しないでください。
 
 ## 使い方
 

@@ -93,10 +93,22 @@ export function activate(context: vscode.ExtensionContext) {
     );
     const scriptUri = panel.webview.asWebviewUri(scriptPathOnDisk);
 
+    // main.cssのパスをWebview用に変換
+    const cssPathOnDisk = vscode.Uri.file(
+      path.join(context.extensionPath, 'src', 'webview', 'main.css')
+    );
+    const cssUri = panel.webview.asWebviewUri(cssPathOnDisk);
+
     // index.html内のmain.jsパスを書き換え
     html = html.replace(
       /<script src="main\.js"><\/script>/,
       `<script src="${scriptUri}"></script>`
+    );
+
+    // index.html内のmain.cssパスを書き換え
+    html = html.replace(
+      /<link rel="stylesheet" href="main\.css">/,
+      `<link rel="stylesheet" href="${cssUri}">`
     );
 
     return html;

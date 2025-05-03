@@ -1,0 +1,53 @@
+/* VSCodeテーマに追従する背景色 */
+body, .tableEditor, .tui-grid-root, .tui-grid-container {
+  background: var(--vscode-editor-background, #1e1e1e) !important;
+}
+/* TOAST UI Grid 枠・背景を消すカスタムCSS */
+.tui-grid-root,
+.tui-grid-container {
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+@import "tui-grid/dist/tui-grid.min.css";
+.tableEditor {
+  margin: 0;
+  max-width: 100%;
+}
+
+.tableEditorTable {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.tableEditor th,
+.tableEditor td {
+  border: 1px solid #aaa;
+  padding: 6px 12px;
+  min-width: 60px;
+  text-align: left;
+}
+
+.tableEditor th {
+  background: var(--vscode-editor-background, #f5f5f5) !important;
+}
+
+.tableEditorButtons {
+  margin-top: 8px;
+  display: flex;
+  gap: 8px;
+}
+
+.tableEditorButtons button {
+  padding: 4px 12px;
+  border-radius: 4px;
+  border: 1px solid var(--vscode-button-border, #bbb);
+  background: var(--vscode-button-background, #fff);
+  color: var(--vscode-button-foreground, #000);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.tableEditorButtons button:hover {
+  background: var(--vscode-button-hoverBackground, #e6f0ff);
+}
