@@ -43,21 +43,24 @@ function parseMarkdownTable(md: string): { columns: any[]; data: any[] } {
 }
 
 // ToastUIスタイルのカスタムボタンコンポーネント
-const ToastButton: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement>> = ({ children, ...props }) => (
+const ToastButton: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement>> = ({ children, disabled, ...props }) => (
   <button
     {...props}
+    disabled={disabled}
     style={{
-      backgroundColor: "#00aaff",
-      color: "#fff",
+      backgroundColor: disabled ? "#cccccc" : "#00aaff",
+      color: disabled ? "#888" : "#fff",
       border: "none",
       padding: "8px 16px",
       margin: "4px",
       borderRadius: "4px",
-      cursor: "pointer",
+      cursor: disabled ? "not-allowed" : "pointer",
       fontSize: "14px",
+      opacity: disabled ? 0.6 : 1,
+      pointerEvents: disabled ? "none" : "auto"
     }}
-    onMouseOver={(e) => (e.currentTarget.style.backgroundColor = "#0099cc")}
-    onMouseOut={(e) => (e.currentTarget.style.backgroundColor = "#00aaff")}
+    onMouseOver={disabled ? undefined : (e) => (e.currentTarget.style.backgroundColor = "#0099cc")}
+    onMouseOut={disabled ? undefined : (e) => (e.currentTarget.style.backgroundColor = "#00aaff")}
   >
     {children}
   </button>
@@ -160,8 +163,8 @@ export const TableEditor: React.FC = () => {
           heightResizable={true}
         />
         <div className="tableEditorButtons">
-          <ToastButton onClick={handleSave}>Save</ToastButton>
-          <ToastButton onClick={handleSaveAndClose}>Save & Close</ToastButton>
+          <ToastButton onClick={handleSave} disabled={!isModified}>Save</ToastButton>
+          <ToastButton onClick={handleSaveAndClose} disabled={!isModified}>Save & Close</ToastButton>
         </div>
       </div>
     </div>
