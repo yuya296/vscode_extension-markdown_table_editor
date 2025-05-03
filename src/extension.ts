@@ -2,21 +2,58 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
+import { marked } from 'marked';
 
 export function activate(context: vscode.ExtensionContext) {
+  // TableEditCodeLensProviderの登録とイベントリスナーもactivate内にまとめる
+  const tableEditProvider = new TableEditCodeLensProvider();
+  context.subscriptions.push(
+    vscode.languages.registerCodeLensProvider({ language: "markdown" }, tableEditProvider)
+  );
+
+  context.subscriptions.push(
+    vscode.workspace.onDidChangeTextDocument(e => {
+      if (e.document.languageId === 'markdown') {
+        tableEditProvider.refresh();
+      }
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.window.onDidChangeActiveTextEditor(editor => {
+      if (editor && editor.document.languageId === 'markdown') {
+        tableEditProvider.refresh();
+        setTimeout(() => {
+          vscode.commands.executeCommand('editor.action.codeLensRefresh');
+        }, 100);
+      }
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.workspace.onDidOpenTextDocument(doc => {
+      if (doc.languageId === 'markdown') {
+        tableEditProvider.refresh();
+        setTimeout(() => {
+          vscode.commands.executeCommand('editor.action.codeLensRefresh');
+        }, 100);
+      }
+    })
+  );
+
   // Add Table コマンド
   const addTable = vscode.commands.registerCommand('markdown-table-editor.addTable', () => {
     openTableEditorWebview('Add Table');
   });
 
   // Edit Table コマンド
-  const editTable = vscode.commands.registerCommand('markdown-table-editor.editTable', () => {
-    openTableEditorWebview('Edit Table');
+  const editTable = vscode.commands.registerCommand('markdown-table-editor.editTable', (rangeArg?: { startLine: number, endLine: number }) => {
+    openTableEditorWebview('Edit Table', rangeArg);
   });
 
   context.subscriptions.push(addTable, editTable);
 
-  function openTableEditorWebview(title: string) {
+  function openTableEditorWebview(title: string, rangeArg?: { startLine: number, endLine: number }) {
     const panel = vscode.window.createWebviewPanel(
       'markdownTableEditor',
       title,
@@ -33,11 +70,18 @@ export function activate(context: vscode.ExtensionContext) {
     const initialUri = initialEditor?.document.uri;
     const initialSelection = initialEditor?.selection;
 
-    // 選択範囲のテキストを取得（Add/Edit両方対応）
+    // テーブル範囲指定があればその部分を取得、なければ選択範囲
     let selectedText = '';
     const editor = vscode.window.activeTextEditor;
     if (editor) {
-      selectedText = editor.document.getText(editor.selection);
+      if (rangeArg && typeof rangeArg.startLine === 'number' && typeof rangeArg.endLine === 'number') {
+        const start = new vscode.Position(rangeArg.startLine, 0);
+        const end = new vscode.Position(rangeArg.endLine + 1, 0);
+        const range = new vscode.Range(start, end);
+        selectedText = editor.document.getText(range);
+      } else {
+        selectedText = editor.document.getText(editor.selection);
+      }
     }
 
     // Webview初期化用のスクリプトを埋め込む
@@ -103,6 +147,7 @@ export function activate(context: vscode.ExtensionContext) {
     html = html.replace(
       /<script src="main\.js"><\/script>/,
       `<script src="${scriptUri}"></script>`
+// デバッグ: CodeLensProviderの呼び出し状況を確認
     );
 
     // index.html内のmain.cssパスを書き換え
@@ -113,6 +158,81 @@ export function activate(context: vscode.ExtensionContext) {
 
     return html;
   }
+}
+// --- CodeLens Provider for Markdown Tables ---
+class TableEditCodeLensProvider implements vscode.CodeLensProvider {
+  private _onDidChangeCodeLenses = new vscode.EventEmitter<void>();
+  readonly onDidChangeCodeLenses = this._onDidChangeCodeLenses.event;
+
+  provideCodeLenses(document: any): vscode.CodeLens[] {
+    // デバッグ: CodeLensProviderの呼び出し状況を確認
+    const codeLenses: vscode.CodeLens[] = [];
+    const text = document.getText();
+
+    // markedでパースしてテーブルノードを抽出
+    const tokens = marked.lexer(text);
+
+    let offset = 0;
+    for (const token of tokens) {
+      if (token.type === 'table') {
+        // ヘッダー行のみで位置を特定（柔軟に対応）
+        // header配列の内容を正規表現化して各行を走査
+        // token.rawからheader行を抽出し、その行番号にCodeLensを表示
+        if (typeof token.raw === 'string') {
+          const lines = text.split('\n');
+          const rawLines = token.raw.split('\n').map(l => l.trim());
+          // header行はrawの最初の行
+          const headerRaw = rawLines[0];
+          // ドキュメント内でheaderRawに緩く一致する行を探す
+          for (let i = 0; i < lines.length; i++) {
+            // headerはToken[]なのでtextプロパティを使う
+            const headerPattern = '^\\s*\\|?\\s*' +
+              token.header.map((h: any) => escapeRegExp(h.text.trim()) + '\\s*').join('\\|\\s*') +
+              '\\|?\\s*$';
+            const headerRegex = new RegExp(headerPattern);
+            if (headerRegex.test(lines[i])) {
+              // セパレータ行（---）が次行にあるかも確認
+              if (i + 1 < lines.length && /^\s*\|?(\s*:?-+:?\s*\|)+\s*$/.test(lines[i + 1])) {
+                if (!codeLenses.some(lens => lens.range.start.line === i)) {
+                  const range = new vscode.Range(i, 0, i, 0);
+                  codeLenses.push(
+                    new vscode.CodeLens(range, {
+                      title: "Edit Table",
+                      command: "markdown-table-editor.editTable",
+                      arguments: [{ startLine: i, endLine: findTableEndLine(lines, i) }]
+                    })
+                  );
+                }
+                break; // 1テーブルにつき1つだけ
+              }
+            }
+          }
+        }
+      }
+    }
+    return codeLenses;
+  }
+
+
+  refresh() {
+    this._onDidChangeCodeLenses.fire();
+  }
+}
+
+// 正規表現エスケープ関数
+function escapeRegExp(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+function findTableEndLine(lines: string[], startLine: number): number {
+  // テーブルの終端は空行または非テーブル行まで
+  let end = startLine + 1;
+  while (
+    end < lines.length &&
+    /^\s*\|.*\|\s*$/.test(lines[end])
+  ) {
+    end++;
+  }
+  return end - 1;
 }
 
 export function deactivate() {}
