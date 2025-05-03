@@ -1,4 +1,3 @@
-// src/extension.ts
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -70,15 +69,16 @@ export function activate(context: vscode.ExtensionContext) {
     const initialUri = initialEditor?.document.uri;
     const initialSelection = initialEditor?.selection;
 
-    // テーブル範囲指定があればその部分を取得、なければ選択範囲
+    // テーブル範囲指定があればその範囲を保存
+    let tableRange: vscode.Range | undefined = undefined;
     let selectedText = '';
     const editor = vscode.window.activeTextEditor;
     if (editor) {
       if (rangeArg && typeof rangeArg.startLine === 'number' && typeof rangeArg.endLine === 'number') {
         const start = new vscode.Position(rangeArg.startLine, 0);
         const end = new vscode.Position(rangeArg.endLine + 1, 0);
-        const range = new vscode.Range(start, end);
-        selectedText = editor.document.getText(range);
+        tableRange = new vscode.Range(start, end);
+        selectedText = editor.document.getText(tableRange);
       } else {
         selectedText = editor.document.getText(editor.selection);
       }
@@ -87,28 +87,31 @@ export function activate(context: vscode.ExtensionContext) {
     // Webview初期化用のスクリプトを埋め込む
     // Webviewからのメッセージ受信
     panel.webview.onDidReceiveMessage(async (message) => {
-      vscode.window.showInformationMessage('onDidReceiveMessage: ' + JSON.stringify(message));
-      if (message.type === 'save' && message.markdown) {
+      if ((message.type === 'save' || message.type === 'saveAndClose') && message.markdown) {
         // 保存時点でWebview起動時のエディタ情報を利用
-        if (initialUri && initialSelection) {
+        if (initialUri) {
           const doc = await vscode.workspace.openTextDocument(initialUri);
           const edit = new vscode.WorkspaceEdit();
-          let selection = initialSelection;
-          // 選択範囲が空ならカーソル位置に挿入
-          if (selection.isEmpty) {
-            selection = new vscode.Selection(selection.start, selection.start);
+          // テーブル範囲があればそこを置換、なければ選択範囲
+          let replaceRange = tableRange ?? initialSelection;
+          if (!replaceRange) {
+            vscode.window.showErrorMessage('保存時に編集対象範囲が取得できません');
+            return;
           }
-          edit.replace(initialUri, selection, message.markdown);
-          const result = await vscode.workspace.applyEdit(edit);
-          vscode.window.showInformationMessage(
-            `applyEdit result: ${result}, uri: ${initialUri.fsPath}, selection: ${selection.start.line}:${selection.start.character}`
-          );
+          edit.replace(initialUri, replaceRange, message.markdown);
+          await vscode.workspace.applyEdit(edit);
         } else {
           vscode.window.showErrorMessage('保存時に編集対象のMarkdownドキュメント情報が取得できません');
         }
-        panel.dispose();
-      } else {
-        vscode.window.showInformationMessage('onDidReceiveMessage (other): ' + JSON.stringify(message));
+        if (message.type === 'saveAndClose') {
+          panel.dispose();
+        }
+      } else if (message.type === 'modified') {
+        if (!panel.title.endsWith(' [Modified]')) {
+          panel.title = panel.title + ' [Modified]';
+        }
+      } else if (message.type === 'saved') {
+        panel.title = panel.title.replace(/ ?\[Modified\]$/, '');
       }
     });
 
@@ -165,7 +168,6 @@ class TableEditCodeLensProvider implements vscode.CodeLensProvider {
   readonly onDidChangeCodeLenses = this._onDidChangeCodeLenses.event;
 
   provideCodeLenses(document: any): vscode.CodeLens[] {
-    // デバッグ: CodeLensProviderの呼び出し状況を確認
     const codeLenses: vscode.CodeLens[] = [];
     const text = document.getText();
 
