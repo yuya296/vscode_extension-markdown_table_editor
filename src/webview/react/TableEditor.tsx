@@ -74,7 +74,7 @@ function toMarkdownTable(columns: any[], data: any[]): string {
   const rows = data.map(row =>
     "|" + columns.map((col: any) => (row[col.name] ?? "")).join("|") + "|"
   );
-  return [header, sep, ...rows].join("\n");
+  return [header, sep, ...rows].join("\n") + "\n";
 }
 
 export const TableEditor: React.FC = () => {
