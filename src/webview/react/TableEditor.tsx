@@ -12,9 +12,11 @@ declare global {
   }
 }
 
-import React, { useRef, useState, useEffect } from "react";
-import Grid from "@toast-ui/react-grid";
-import "tui-grid/dist/tui-grid.min.css";
+import React, { useRef, useState, useEffect, useCallback } from "react";
+import { AgGridReact } from "ag-grid-react";
+import { ClientSideRowModelModule } from "ag-grid-community";
+import "ag-grid-community/styles/ag-grid.css";
+import "ag-grid-community/styles/ag-theme-alpine.css";
 // Markdownテーブルをcolumns/data形式に変換する関数
 function parseMarkdownTable(md: string): { columns: any[]; data: any[] } {
   const lines = md
@@ -25,8 +27,7 @@ function parseMarkdownTable(md: string): { columns: any[]; data: any[] } {
   const header = lines[0].slice(1, -1).split('|').map(h => h.trim());
   const columns = header.map((h, i) => ({
     name: `col${i + 1}`,
-    header: h,
-    editor: 'text',
+    header: h
   }));
   const data = lines.slice(2).map(row => {
     const cells = row.slice(1, -1).split('|').map(c => c.trim());
@@ -79,6 +80,8 @@ function toMarkdownTable(columns: any[], data: any[]): string {
 
 export const TableEditor: React.FC = () => {
   const gridRef = useRef<any>(null);
+  const [rowData, setRowData] = useState<any[]>([]);
+  const [columnDefs, setColumnDefs] = useState<any[]>([]);
 
   // 初期Markdownデータをstateにセット
   const initialMarkdown = window.__INIT_MARKDOWN__ || "";
@@ -87,6 +90,20 @@ export const TableEditor: React.FC = () => {
 
   // markdownからcolumns/dataを生成
   const { columns, data } = React.useMemo(() => parseMarkdownTable(markdown), [markdown]);
+
+  // 初回マウント時のみrowData/columnDefsをセット
+  useEffect(() => {
+    if (!rowData.length && !columnDefs.length) {
+      setRowData(data);
+      setColumnDefs(
+        columns.map(col => ({
+          field: col.name,
+          headerName: col.header,
+          editable: true,
+        }))
+      );
+    }
+  }, []);
 
   // 編集検知: GridインスタンスのafterChangeイベントで検知
   useEffect(() => {
@@ -108,9 +125,11 @@ export const TableEditor: React.FC = () => {
 
   // 保存処理
   const handleSave = () => {
-    if (!gridRef.current) return;
-    const gridInst = gridRef.current.getInstance();
-    const currentData = gridInst.getData();
+    if (!gridRef.current || !gridRef.current.api) return;
+    const currentData: any[] = [];
+    gridRef.current.api.forEachNode((node: any) => {
+      if (node.data) currentData.push(node.data);
+    });
     const md = toMarkdownTable(columns, currentData);
     if (window.vscode && typeof window.vscode.postMessage === "function") {
       window.vscode.postMessage({ type: "save", markdown: md });
@@ -121,9 +140,11 @@ export const TableEditor: React.FC = () => {
 
   // Save & Closeボタン処理
   const handleSaveAndClose = () => {
-    if (!gridRef.current) return;
-    const gridInst = gridRef.current.getInstance();
-    const currentData = gridInst.getData();
+    if (!gridRef.current || !gridRef.current.api) return;
+    const currentData: any[] = [];
+    gridRef.current.api.forEachNode((node: any) => {
+      if (node.data) currentData.push(node.data);
+    });
     const md = toMarkdownTable(columns, currentData);
     if (window.vscode && typeof window.vscode.postMessage === "function") {
       window.vscode.postMessage({ type: "saveAndClose", markdown: md });
@@ -150,38 +171,60 @@ export const TableEditor: React.FC = () => {
 
   // 行追加
   const handleAddRow = () => {
-    const gridInst = gridRef.current?.getInstance?.();
-    if (!gridInst) return;
-    gridInst.appendRow({});
-    setIsModified(true);
+    setRowData(prev => {
+      const newData = [...prev, {}];
+      setIsModified(true);
+      return newData;
+    });
   };
 
   // 列追加
   const handleAddColumn = () => {
-    // 新しい列名
-    const newColIdx = columns.length + 1;
+    const newColIdx = columnDefs.length + 1;
     const newColName = `col${newColIdx}`;
     const newColHeader = `Column${newColIdx}`;
-    // columns/dataを再構築
     const newColumns = [
-      ...columns,
-      { name: newColName, header: newColHeader, editor: 'text' }
+      ...columnDefs,
+      { field: newColName, headerName: newColHeader, editable: true }
     ];
-    const newData = data.map(row => ({ ...row, [newColName]: "" }));
-    setMarkdown(toMarkdownTable(newColumns, newData));
+    const newData = rowData.map(row => ({ ...row, [newColName]: "" }));
+    // Markdownにも反映
+    setMarkdown(toMarkdownTable(
+      newColumns.map(col => ({ name: col.field, header: col.headerName })),
+      newData
+    ));
     setIsModified(true);
   };
 
   return (
     <div>
       <div className="tableEditor">
-        <Grid
-          ref={gridRef}
-          columns={columns}
-          data={data}
-          bodyHeight="auto"
-          heightResizable={true}
-        />
+        <div className="ag-theme-alpine" style={{ width: "100%", minHeight: 300 }}>
+          <AgGridReact
+            ref={gridRef}
+            columnDefs={columnDefs}
+            rowData={rowData}
+            modules={[ClientSideRowModelModule]}
+            defaultColDef={{
+              editable: true, // 👈 ここが重要
+              resizable: true,
+              sortable: true,
+              flex: 1
+            }}
+
+            onCellValueChanged={() => {
+              if (!isModified) {
+                setIsModified(true);
+                if (window.vscode && typeof window.vscode.postMessage === "function") {
+                  window.vscode.postMessage({ type: "modified" });
+                }
+              }
+            }}
+            domLayout="autoHeight"
+            suppressRowClickSelection={true}
+            rowSelection="multiple"
+          />
+        </div>
         <div className="tableEditorButtons">
           <ToastButton onClick={handleAddRow}>行を追加</ToastButton>
           <ToastButton onClick={handleAddColumn}>列を追加</ToastButton>
