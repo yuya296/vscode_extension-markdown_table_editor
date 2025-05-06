@@ -66,6 +66,16 @@ export const TableEditor: React.FC = () => {
           field: col.name,
           headerName: col.header,
           cellEditor: "agLargeTextCellEditor",
+          cellEditorPopup: true,
+          cellEditorParams: {
+            rows: 3,
+            maxRows: 10,
+            autoResize: true,
+            // popupの高さを調整
+            minHeight: 40,
+            maxHeight: 200,
+            width: 400,
+          },
         }))
       );
     }
