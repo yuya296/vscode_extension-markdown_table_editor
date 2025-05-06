@@ -14,7 +14,7 @@ declare global {
 
 import React, { useRef, useState, useEffect, useCallback } from "react";
 import { AgGridReact } from "ag-grid-react";
-import { ModuleRegistry, ClientSideRowModelModule, _EditCoreModule as EditCoreModule, ValidationModule, TextEditorModule, RowSelectionModule, RowApiModule, CellStyleModule, RowAutoHeightModule } from "ag-grid-community";
+import { ModuleRegistry, ClientSideRowModelModule, _EditCoreModule as EditCoreModule, ValidationModule, TextEditorModule, LargeTextEditorModule, RowSelectionModule, RowApiModule, CellStyleModule, RowAutoHeightModule } from "ag-grid-community";
 import "ag-grid-community/styles/ag-theme-alpine.css";
 
 // AG Grid モジュール登録
@@ -23,6 +23,7 @@ ModuleRegistry.registerModules([
   EditCoreModule,
   ValidationModule,
   TextEditorModule,
+  LargeTextEditorModule,
   RowSelectionModule,
   RowApiModule,
   CellStyleModule,
@@ -64,6 +65,7 @@ export const TableEditor: React.FC = () => {
           ...DEFAULT_COLUMN_DEF,
           field: col.name,
           headerName: col.header,
+          cellEditor: "agLargeTextCellEditor",
         }))
       );
     }
