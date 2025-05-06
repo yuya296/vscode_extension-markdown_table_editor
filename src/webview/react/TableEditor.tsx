@@ -17,44 +17,7 @@ import { AgGridReact } from "ag-grid-react";
 import { ModuleRegistry, ClientSideRowModelModule, _EditCoreModule as EditCoreModule, ValidationModule, TextEditorModule, RowSelectionModule, RowApiModule } from "ag-grid-community";
 import "ag-grid-community/styles/ag-theme-alpine.css";
 import TableEditorButtons from "./TableEditorButtons";
-// Markdownテーブルをcolumns/data形式に変換する関数
-function parseMarkdownTable(md: string): { columns: any[]; data: any[] } {
-  const lines = md
-    .split('\n')
-    .map(l => l.trim())
-    .filter(l => l && l.startsWith('|') && l.endsWith('|'));
-  if (lines.length < 2) return { columns: [], data: [] };
-  const header = lines[0].slice(1, -1).split('|').map(h => h.trim());
-  const columns = header.map((h, i) => ({
-    name: `col${i + 1}`,
-    header: h
-  }));
-  const data = lines.slice(2).map(row => {
-    const cells = row.slice(1, -1).split('|').map(c => c.trim());
-    const obj: Record<string, string> = {};
-    columns.forEach((col, i) => {
-      obj[col.name] = cells[i] ?? '';
-    });
-    return obj;
-  });
-  return { columns, data };
-}
-
-// ToastUIスタイルのカスタムボタンコンポーネント
-
-
-/**
- * データ→Markdown変換
- */
-function toMarkdownTable(columns: any[], data: any[]): string {
-  if (!columns.length) return "";
-  const header = "|" + columns.map((col: any) => col.header).join("|") + "|";
-  const sep = "|" + columns.map(() => "---").join("|") + "|";
-  const rows = data.map(row =>
-    "|" + columns.map((col: any) => (row[col.name] ?? "")).join("|") + "|"
-  );
-  return [header, sep, ...rows].join("\n") + "\n";
-}
+import { parseMarkdownTable, toMarkdownTable } from "./utils/table";
 
 export const TableEditor: React.FC = () => {
   const gridRef = useRef<any>(null);
@@ -152,32 +115,13 @@ export const TableEditor: React.FC = () => {
     setIsModified(false);
   }, []);
 
-  // 行追加
-  const handleAddRow = () => {
-    setRowData(prev => {
-      const newData = [...prev, {}];
-      setIsModified(true);
-      return newData;
-    });
-  };
-
-  // 列追加
-  const handleAddColumn = () => {
-    const newColIdx = columnDefs.length + 1;
-    const newColName = `col${newColIdx}`;
-    const newColHeader = `Column${newColIdx}`;
-    const newColumns = [
-      ...columnDefs,
-      { field: newColName, headerName: newColHeader, editable: true }
-    ];
-    const newData = rowData.map(row => ({ ...row, [newColName]: "" }));
-    // Markdownにも反映
-    setMarkdown(toMarkdownTable(
-      newColumns.map(col => ({ name: col.field, header: col.headerName })),
-      newData
-    ));
-    setIsModified(true);
-  };
+  const { handleAddRow, handleAddColumn } = useTableEditorHandlers({
+    columnDefs,
+    rowData,
+    setRowData,
+    setMarkdown,
+    setIsModified,
+  });
 
   return (
     <div>
