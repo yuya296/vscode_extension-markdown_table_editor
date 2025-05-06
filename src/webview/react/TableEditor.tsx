@@ -33,6 +33,7 @@ ModuleRegistry.registerModules([
 import TableEditorButtons from "./TableEditorButtons";
 import { parseMarkdownTable, toMarkdownTable } from "./utils/table";
 import { useTableEditorHandlers } from "./hooks/useTableEditorHandlers";
+import CustomTextareaEditor from "./CustomTextareaEditor";
 
 const DEFAULT_COLUMN_DEF = {
   editable: true,
@@ -65,8 +66,7 @@ export const TableEditor: React.FC = () => {
         columns.map(col => ({
           ...DEFAULT_COLUMN_DEF,
           field: col.name,
-          headerName: col.header,
-          cellEditor: require("./CustomTextareaEditor.ts").default,
+          cellEditor: CustomTextareaEditor,
           cellEditorPopup: false,
           cellEditorParams: {},
           cellRenderer: (params: any) => {
