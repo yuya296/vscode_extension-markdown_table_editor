@@ -14,11 +14,36 @@ declare global {
 
 import React, { useRef, useState, useEffect, useCallback } from "react";
 import { AgGridReact } from "ag-grid-react";
-import { ModuleRegistry, ClientSideRowModelModule, _EditCoreModule as EditCoreModule, ValidationModule, TextEditorModule, RowSelectionModule, RowApiModule } from "ag-grid-community";
+import { ModuleRegistry, ClientSideRowModelModule, _EditCoreModule as EditCoreModule, ValidationModule, TextEditorModule, LargeTextEditorModule, CustomEditorModule, RowSelectionModule, RowApiModule, CellStyleModule, RowAutoHeightModule } from "ag-grid-community";
 import "ag-grid-community/styles/ag-theme-alpine.css";
+
+// AG Grid モジュール登録
+ModuleRegistry.registerModules([
+  ClientSideRowModelModule,
+  EditCoreModule,
+  ValidationModule,
+  TextEditorModule,
+  LargeTextEditorModule,
+  CustomEditorModule,
+  RowSelectionModule,
+  RowApiModule,
+  CellStyleModule,
+  RowAutoHeightModule,
+]);
 import TableEditorButtons from "./TableEditorButtons";
 import { parseMarkdownTable, toMarkdownTable } from "./utils/table";
 import { useTableEditorHandlers } from "./hooks/useTableEditorHandlers";
+import CustomTextareaEditor from "./CustomTextareaEditor";
+
+const DEFAULT_COLUMN_DEF = {
+  editable: true,
+  resizable: true,
+  sortable: true,
+  minWidth: 100,
+  autoHeight: true,
+  cellClass: "wrap-text-cell",
+  wrapText: true,
+};
 
 export const TableEditor: React.FC = () => {
   const gridRef = useRef<any>(null);
@@ -39,8 +64,21 @@ export const TableEditor: React.FC = () => {
       setRowData(data);
       setColumnDefs(
         columns.map(col => ({
+          ...DEFAULT_COLUMN_DEF,
           field: col.name,
-          headerName: col.header,
+          cellEditor: CustomTextareaEditor,
+          cellEditorPopup: false,
+          cellEditorParams: {},
+          cellRenderer: (params: any) => {
+            if (typeof params.value !== "string") return params.value;
+            return (
+              <span
+                dangerouslySetInnerHTML={{
+                  __html: params.value.replace(/\n/g, "<br>")
+                }}
+              />
+            );
+          },
         }))
       );
     }
@@ -118,6 +156,46 @@ export const TableEditor: React.FC = () => {
     setIsModified,
   });
 
+    // wrapText/autoHeightのon/off切替（単一列）
+    const handleToggleWrap = (field: string) => {
+      setColumnDefs((prevDefs: any[]) =>
+        prevDefs.map(def => {
+          if (def.field === field) {
+            const isWrapped = def.cellClass === "wrap-text-cell";
+            return {
+              ...def,
+              cellClass: isWrapped ? undefined : "wrap-text-cell",
+              autoHeight: !isWrapped,
+              wrapText: !isWrapped,
+              minWidth: def.minWidth,
+              maxWidth: def.maxWidth,
+            };
+          }
+          return def;
+        })
+      );
+    };
+  
+    // wrapText/autoHeightのon/off切替（全列一括）
+    const handleToggleWrapAll = () => {
+      setColumnDefs((prevDefs: any[]) => {
+        const allWrapped = prevDefs.every(def => def.cellClass === "wrap-text-cell");
+        return prevDefs.map(def => {
+          // 既存のhandleToggleWrapロジックを流用
+          const isWrapped = def.cellClass === "wrap-text-cell";
+          const nextWrapped = allWrapped ? false : true;
+          return {
+            ...def,
+            cellClass: nextWrapped ? "wrap-text-cell" : undefined,
+            autoHeight: nextWrapped,
+            wrapText: nextWrapped,
+            minWidth: def.minWidth,
+            maxWidth: def.maxWidth,
+          };
+        });
+      });
+    };
+
   return (
     <div>
       <div className="tableEditor">
@@ -127,6 +205,8 @@ export const TableEditor: React.FC = () => {
           onSave={handleSave}
           onSaveAndClose={handleSaveAndClose}
           isModified={isModified}
+          wrapAllChecked={columnDefs.length > 0 && columnDefs.every(def => def.cellClass === "wrap-text-cell")}
+          onToggleWrapAll={handleToggleWrapAll}
         />
         <div className="ag-theme-alpine" style={{ width: "100%", minHeight: 300 }}>
           <AgGridReact
@@ -134,12 +214,7 @@ export const TableEditor: React.FC = () => {
             columnDefs={columnDefs}
             rowData={rowData}
             modules={[ClientSideRowModelModule, EditCoreModule, ValidationModule, TextEditorModule, RowSelectionModule, RowApiModule]}
-            defaultColDef={{
-              editable: true,
-              resizable: true,
-              sortable: true,
-              flex: 1
-            }}
+            defaultColDef={DEFAULT_COLUMN_DEF}
 
             onCellValueChanged={e => {
               const updatedData: any[] = [];
@@ -155,7 +230,7 @@ export const TableEditor: React.FC = () => {
               }
             }}
             domLayout="autoHeight"
-            rowSelection="multiple"
+            rowSelection={{ mode: "multiRow" }}
           />
         </div>
       </div>

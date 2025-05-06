@@ -20,7 +20,7 @@ export function parseMarkdownTable(md: string): { columns: any[]; data: any[] } 
     const cells = row.slice(1, -1).split('|').map(c => c.trim());
     const obj: Record<string, string> = {};
     columns.forEach((col, i) => {
-      obj[col.name] = cells[i] ?? '';
+      obj[col.name] = (cells[i] ?? '').replace(/<br\s*\/?>/gi, '\n');
     });
     return obj;
   });
@@ -35,7 +35,7 @@ export function toMarkdownTable(columns: any[], data: any[]): string {
   const header = "|" + columns.map((col: any) => col.header).join("|") + "|";
   const sep = "|" + columns.map(() => "---").join("|") + "|";
   const rows = data.map(row =>
-    "|" + columns.map((col: any) => (row[col.name] ?? "")).join("|") + "|"
+    "|" + columns.map((col: any) => (row[col.name] ?? "").replace(/\n/g, "<br>")).join("|") + "|"
   );
   return [header, sep, ...rows].join("\n") + "\n";
 }
