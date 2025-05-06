@@ -76,6 +76,16 @@ export const TableEditor: React.FC = () => {
             maxHeight: 200,
             width: 400,
           },
+          cellRenderer: (params: any) => {
+            if (typeof params.value !== "string") return params.value;
+            return (
+              <span
+                dangerouslySetInnerHTML={{
+                  __html: params.value.replace(/\n/g, "<br>")
+                }}
+              />
+            );
+          },
         }))
       );
     }
