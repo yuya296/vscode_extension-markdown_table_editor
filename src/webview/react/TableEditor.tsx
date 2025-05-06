@@ -230,7 +230,7 @@ export const TableEditor: React.FC = () => {
               }
             }}
             domLayout="autoHeight"
-            rowSelection="multiple"
+            rowSelection={{ mode: "multiRow" }}
           />
         </div>
       </div>
