@@ -39,6 +39,7 @@ const DEFAULT_COLUMN_DEF = {
   minWidth: 100,
   autoHeight: true,
   cellClass: "wrap-text-cell",
+  wrapText: true,
 };
 
 export const TableEditor: React.FC = () => {
@@ -140,25 +141,45 @@ export const TableEditor: React.FC = () => {
     setIsModified,
   });
 
-  // wrapText/autoHeightのon/off切替
-  const handleToggleWrap = (field: string) => {
-    setColumnDefs((prevDefs: any[]) =>
-      prevDefs.map(def => {
-        if (def.field === field) {
+    // wrapText/autoHeightのon/off切替（単一列）
+    const handleToggleWrap = (field: string) => {
+      setColumnDefs((prevDefs: any[]) =>
+        prevDefs.map(def => {
+          if (def.field === field) {
+            const isWrapped = def.cellClass === "wrap-text-cell";
+            return {
+              ...def,
+              cellClass: isWrapped ? undefined : "wrap-text-cell",
+              autoHeight: !isWrapped,
+              wrapText: !isWrapped,
+              minWidth: def.minWidth,
+              maxWidth: def.maxWidth,
+            };
+          }
+          return def;
+        })
+      );
+    };
+  
+    // wrapText/autoHeightのon/off切替（全列一括）
+    const handleToggleWrapAll = () => {
+      setColumnDefs((prevDefs: any[]) => {
+        const allWrapped = prevDefs.every(def => def.cellClass === "wrap-text-cell");
+        return prevDefs.map(def => {
+          // 既存のhandleToggleWrapロジックを流用
           const isWrapped = def.cellClass === "wrap-text-cell";
+          const nextWrapped = allWrapped ? false : true;
           return {
             ...def,
-            cellClass: isWrapped ? undefined : "wrap-text-cell",
-            autoHeight: !isWrapped,
-            wrapText: !isWrapped,
-            minWidth: isWrapped ? 100 : 100,
-            maxWidth: isWrapped ? 150 : undefined,
+            cellClass: nextWrapped ? "wrap-text-cell" : undefined,
+            autoHeight: nextWrapped,
+            wrapText: nextWrapped,
+            minWidth: def.minWidth,
+            maxWidth: def.maxWidth,
           };
-        }
-        return def;
-      })
-    );
-  };
+        });
+      });
+    };
 
   return (
     <div>
@@ -169,8 +190,8 @@ export const TableEditor: React.FC = () => {
           onSave={handleSave}
           onSaveAndClose={handleSaveAndClose}
           isModified={isModified}
-          columns={columns}
-          onToggleWrap={handleToggleWrap}
+          wrapAllChecked={columnDefs.length > 0 && columnDefs.every(def => def.cellClass === "wrap-text-cell")}
+          onToggleWrapAll={handleToggleWrapAll}
         />
         <div className="ag-theme-alpine" style={{ width: "100%", minHeight: 300 }}>
           <AgGridReact
