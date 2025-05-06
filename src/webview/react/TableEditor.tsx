@@ -103,12 +103,6 @@ export const TableEditor: React.FC = () => {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   });
-  useEffect(() => {
-    if (gridRef.current?.api) {
-      console.log("Displayed rows:", gridRef.current.api.getDisplayedRowCount());
-      console.log("Is editing cell?", gridRef.current.api.getEditingCells());
-    }
-  }, [gridRef.current]);
 
   useEffect(() => {
     setMarkdown(initialMarkdown);
