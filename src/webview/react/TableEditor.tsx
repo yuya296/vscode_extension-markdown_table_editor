@@ -18,6 +18,7 @@ import { ModuleRegistry, ClientSideRowModelModule, _EditCoreModule as EditCoreMo
 import "ag-grid-community/styles/ag-theme-alpine.css";
 import TableEditorButtons from "./TableEditorButtons";
 import { parseMarkdownTable, toMarkdownTable } from "./utils/table";
+import { useTableEditorHandlers } from "./hooks/useTableEditorHandlers";
 
 export const TableEditor: React.FC = () => {
   const gridRef = useRef<any>(null);
