@@ -17,13 +17,25 @@ export const TextareaCellEditor: React.FC<ICellEditorParams> = (props) => {
       className="ag-input-field-input ag-text-field-input"
       style={{ width: "100%", height: "100%", resize: "vertical", whiteSpace: "pre-wrap", wordBreak: "break-word" }}
       defaultValue={props.value}
-      onChange={e => props.stopEditing && props.stopEditing()}
+      onChange={() => {}}
       onBlur={e => props.stopEditing && props.stopEditing()}
       onKeyDown={e => {
-        console.log(e);
-        if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
-          props.stopEditing && props.stopEditing();
-        }
+        // 何もせず
+      }}
+      onKeyUp={e => {
+        console.log(
+          "onKeyUp:",
+          JSON.stringify({
+            key: e.key,
+            shiftKey: e.shiftKey,
+            ctrlKey: e.ctrlKey,
+            metaKey: e.metaKey,
+            altKey: e.altKey
+          })
+        );
+      }}
+      onInput={e => {
+        console.log("onInput:", e);
       }}
       wrap="soft"
       rows={3}

@@ -14,7 +14,7 @@ declare global {
 
 import React, { useRef, useState, useEffect, useCallback } from "react";
 import { AgGridReact } from "ag-grid-react";
-import { ModuleRegistry, ClientSideRowModelModule, _EditCoreModule as EditCoreModule, ValidationModule, TextEditorModule, LargeTextEditorModule, RowSelectionModule, RowApiModule, CellStyleModule, RowAutoHeightModule } from "ag-grid-community";
+import { ModuleRegistry, ClientSideRowModelModule, _EditCoreModule as EditCoreModule, ValidationModule, TextEditorModule, LargeTextEditorModule, CustomEditorModule, RowSelectionModule, RowApiModule, CellStyleModule, RowAutoHeightModule } from "ag-grid-community";
 import "ag-grid-community/styles/ag-theme-alpine.css";
 
 // AG Grid モジュール登録
@@ -24,6 +24,7 @@ ModuleRegistry.registerModules([
   ValidationModule,
   TextEditorModule,
   LargeTextEditorModule,
+  CustomEditorModule,
   RowSelectionModule,
   RowApiModule,
   CellStyleModule,
@@ -65,17 +66,9 @@ export const TableEditor: React.FC = () => {
           ...DEFAULT_COLUMN_DEF,
           field: col.name,
           headerName: col.header,
-          cellEditor: "agLargeTextCellEditor",
-          cellEditorPopup: true,
-          cellEditorParams: {
-            rows: 3,
-            maxRows: 10,
-            autoResize: true,
-            // popupの高さを調整
-            minHeight: 40,
-            maxHeight: 200,
-            width: 400,
-          },
+          cellEditor: require("./CustomTextareaEditor.js").default,
+          cellEditorPopup: false,
+          cellEditorParams: {},
           cellRenderer: (params: any) => {
             if (typeof params.value !== "string") return params.value;
             return (
