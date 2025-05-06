@@ -66,7 +66,7 @@ export const TableEditor: React.FC = () => {
           ...DEFAULT_COLUMN_DEF,
           field: col.name,
           headerName: col.header,
-          cellEditor: require("./CustomTextareaEditor.js").default,
+          cellEditor: require("./CustomTextareaEditor.ts").default,
           cellEditorPopup: false,
           cellEditorParams: {},
           cellRenderer: (params: any) => {
