@@ -14,9 +14,9 @@ declare global {
 
 import React, { useRef, useState, useEffect, useCallback } from "react";
 import { AgGridReact } from "ag-grid-react";
-import { ClientSideRowModelModule } from "ag-grid-community";
-import "ag-grid-community/styles/ag-grid.css";
+import { ModuleRegistry, ClientSideRowModelModule, _EditCoreModule as EditCoreModule, ValidationModule, TextEditorModule, RowSelectionModule, RowApiModule } from "ag-grid-community";
 import "ag-grid-community/styles/ag-theme-alpine.css";
+import TableEditorButtons from "./TableEditorButtons";
 // Markdownテーブルをcolumns/data形式に変換する関数
 function parseMarkdownTable(md: string): { columns: any[]; data: any[] } {
   const lines = md
@@ -41,28 +41,6 @@ function parseMarkdownTable(md: string): { columns: any[]; data: any[] } {
 }
 
 // ToastUIスタイルのカスタムボタンコンポーネント
-const ToastButton: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement>> = ({ children, disabled, ...props }) => (
-  <button
-    {...props}
-    disabled={disabled}
-    style={{
-      backgroundColor: disabled ? "#cccccc" : "#00aaff",
-      color: disabled ? "#888" : "#fff",
-      border: "none",
-      padding: "8px 16px",
-      margin: "4px",
-      borderRadius: "4px",
-      cursor: disabled ? "not-allowed" : "pointer",
-      fontSize: "14px",
-      opacity: disabled ? 0.6 : 1,
-      pointerEvents: disabled ? "none" : "auto"
-    }}
-    onMouseOver={disabled ? undefined : (e) => (e.currentTarget.style.backgroundColor = "#0099cc")}
-    onMouseOut={disabled ? undefined : (e) => (e.currentTarget.style.backgroundColor = "#00aaff")}
-  >
-    {children}
-  </button>
-);
 
 
 /**
@@ -99,7 +77,6 @@ export const TableEditor: React.FC = () => {
         columns.map(col => ({
           field: col.name,
           headerName: col.header,
-          editable: true,
         }))
       );
     }
@@ -163,6 +140,12 @@ export const TableEditor: React.FC = () => {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   });
+  useEffect(() => {
+    if (gridRef.current?.api) {
+      console.log("Displayed rows:", gridRef.current.api.getDisplayedRowCount());
+      console.log("Is editing cell?", gridRef.current.api.getEditingCells());
+    }
+  }, [gridRef.current]);
 
   useEffect(() => {
     setMarkdown(initialMarkdown);
@@ -199,20 +182,32 @@ export const TableEditor: React.FC = () => {
   return (
     <div>
       <div className="tableEditor">
+        <TableEditorButtons
+          onAddRow={handleAddRow}
+          onAddColumn={handleAddColumn}
+          onSave={handleSave}
+          onSaveAndClose={handleSaveAndClose}
+          isModified={isModified}
+        />
         <div className="ag-theme-alpine" style={{ width: "100%", minHeight: 300 }}>
           <AgGridReact
             ref={gridRef}
             columnDefs={columnDefs}
             rowData={rowData}
-            modules={[ClientSideRowModelModule]}
+            modules={[ClientSideRowModelModule, EditCoreModule, ValidationModule, TextEditorModule, RowSelectionModule, RowApiModule]}
             defaultColDef={{
-              editable: true, // 👈 ここが重要
+              editable: true,
               resizable: true,
               sortable: true,
               flex: 1
             }}
 
-            onCellValueChanged={() => {
+            onCellValueChanged={e => {
+              const updatedData: any[] = [];
+              e.api.forEachNode((node) => {
+                if (node.data) updatedData.push(node.data);
+              });
+              setRowData(updatedData);
               if (!isModified) {
                 setIsModified(true);
                 if (window.vscode && typeof window.vscode.postMessage === "function") {
@@ -221,15 +216,8 @@ export const TableEditor: React.FC = () => {
               }
             }}
             domLayout="autoHeight"
-            suppressRowClickSelection={true}
             rowSelection="multiple"
           />
-        </div>
-        <div className="tableEditorButtons">
-          <ToastButton onClick={handleAddRow}>行を追加</ToastButton>
-          <ToastButton onClick={handleAddColumn}>列を追加</ToastButton>
-          <ToastButton onClick={handleSave} disabled={!isModified}>Save</ToastButton>
-          <ToastButton onClick={handleSaveAndClose} disabled={!isModified}>Save & Close</ToastButton>
         </div>
       </div>
     </div>
