@@ -68,6 +68,7 @@ import "jspreadsheet-ce/dist/jspreadsheet.css";
 import TableEditorButtons from "./TableEditorButtons";
 import { parseMarkdownTable, toMarkdownTable } from "./utils/table";
 import { useTableEditorHandlers } from "./hooks/useTableEditorHandlers";
+import styles from "./TableEditor.module.scss";
 
 export const TableEditor: React.FC = () => {
   const sheetRef = useRef<HTMLDivElement>(null);
@@ -252,7 +253,7 @@ export const TableEditor: React.FC = () => {
 
   return (
     <div>
-      <div className="tableEditor">
+      <div className={styles.tableEditor}>
         <TableEditorButtons
           onAddRow={handleAddRow}
           onAddColumn={handleAddColumn}
