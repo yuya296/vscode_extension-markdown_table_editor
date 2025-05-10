@@ -235,7 +235,6 @@ export const TableEditor: React.FC = () => {
   const { handleAddRow, handleAddColumn } = useTableEditorHandlers({
     columnDefs: columns,
     rowData: data,
-    setRowData: () => {},
     setMarkdown,
     setIsModified,
   });
