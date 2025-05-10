@@ -146,25 +146,71 @@ export const TableEditor: React.FC = () => {
   // 保存処理
   const handleSave = useCallback(() => {
     if (!jspInstance.current) return;
+    const columnsOption = jspInstance.current.options.columns || [];
+    // DOMからヘッダー文字列を取得
+    let domHeaders: string[] = [];
+    if (sheetRef.current) {
+      const ths = sheetRef.current.querySelectorAll('.jexcel thead th');
+      domHeaders = Array.from(ths).map(th => (th as HTMLElement).innerText.trim());
+    }
+    const columnsForSave = columnsOption.map((col: any, i: number) => ({
+      name: (domHeaders[i] && domHeaders[i].length > 0) ? domHeaders[i] : `__EMPTY__${i+1}`,
+      header: domHeaders[i] || col.title || "",
+    }));
     const currentData = jspInstance.current.getData();
-    const md = toMarkdownTable(columns, currentData);
+    console.log("save columnsForSave", columnsForSave);
+    console.log("save currentData", currentData);
+    const safeData = Array.isArray(currentData) ? currentData : [];
+    // 2次元配列→オブジェクト配列に変換
+    const dataObjects = safeData.map((row: any[]) => {
+      const obj: Record<string, string> = {};
+      columnsForSave.forEach((col: { name: string }, i: number) => {
+        obj[col.name] = row[i] ?? "";
+      });
+      return obj;
+    });
+    const md = toMarkdownTable(columnsForSave, dataObjects);
+    console.log("save md", md);
     if (window.vscode && typeof window.vscode.postMessage === "function") {
       window.vscode.postMessage({ type: "save", markdown: md });
       window.vscode.postMessage({ type: "saved" });
     }
     setIsModified(false);
-  }, [columns]);
+  }, []);
 
   // Save & Closeボタン処理
   const handleSaveAndClose = useCallback(() => {
     if (!jspInstance.current) return;
+    const columnsOption = jspInstance.current.options.columns || [];
+    // DOMからヘッダー文字列を取得
+    let domHeaders: string[] = [];
+    if (sheetRef.current) {
+      const ths = sheetRef.current.querySelectorAll('.jexcel thead th');
+      domHeaders = Array.from(ths).map(th => (th as HTMLElement).innerText.trim());
+    }
+    const columnsForSave = columnsOption.map((col: any, i: number) => ({
+      name: (domHeaders[i] && domHeaders[i].length > 0) ? domHeaders[i] : `__EMPTY__${i+1}`,
+      header: domHeaders[i] || col.title || "",
+    }));
     const currentData = jspInstance.current.getData();
-    const md = toMarkdownTable(columns, currentData);
+    console.log("saveAndClose columnsForSave", columnsForSave);
+    console.log("saveAndClose currentData", currentData);
+    const safeData = Array.isArray(currentData) ? currentData : [];
+    // 2次元配列→オブジェクト配列に変換
+    const dataObjects = safeData.map((row: any[]) => {
+      const obj: Record<string, string> = {};
+      columnsForSave.forEach((col: { name: string }, i: number) => {
+        obj[col.name] = row[i] ?? "";
+      });
+      return obj;
+    });
+    const md = toMarkdownTable(columnsForSave, dataObjects);
+    console.log("saveAndClose md", md);
     if (window.vscode && typeof window.vscode.postMessage === "function") {
       window.vscode.postMessage({ type: "saveAndClose", markdown: md });
     }
     setIsModified(false);
-  }, [columns]);
+  }, []);
 
   // Cmd+S/Ctrl+S ショートカット対応
   useEffect(() => {
