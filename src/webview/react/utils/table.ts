@@ -9,19 +9,24 @@ export type RowData = Record<string, string>;
  * Markdown文字列をパースしてカラム情報とデータ配列を返す
  */
 export function parseMarkdownTable(md: string): { columns: Column[]; data: RowData[] } {
-  const arr = parseMarkdownTable2D(md);
-  if (arr.length < 1) return { columns: [], data: [] };
-  const header = arr[0];
-  const columns: Column[] = header.map((h, i) => ({
-    name: h !== '' ? h : `__EMPTY__${i + 1}`,
-    header: h
+  // Markdownテーブル→2次元配列
+  const tableRows: string[][] = parseMarkdownTable2D(md);
+  if (tableRows.length < 1) return { columns: [], data: [] };
+
+  // 1行目: ヘッダー
+  const headerCells = tableRows[0];
+  const columns: Column[] = headerCells.map((header, colIdx) => ({
+    name: header !== '' ? header : `__EMPTY__${colIdx + 1}`,
+    header: header
   }));
-  const data: RowData[] = arr.slice(1).map(row => {
-    const obj: RowData = {};
-    columns.forEach((col, i) => {
-      obj[col.name] = row[i] ?? '';
+
+  // 2行目以降: データ
+  const data: RowData[] = tableRows.slice(1).map((rowCells, rowIdx) => {
+    const rowObj: RowData = {};
+    columns.forEach((col, colIdx) => {
+      rowObj[col.name] = rowCells[colIdx] ?? '';
     });
-    return obj;
+    return rowObj;
   });
   return { columns, data };
 }
@@ -31,11 +36,13 @@ export function parseMarkdownTable(md: string): { columns: Column[]; data: RowDa
  */
 export function toMarkdownTable(columns: Column[], data: RowData[]): string {
   if (!columns.length) return '';
-  const arr: string[][] = [
-    columns.map(col => col.header),
-    ...data.map(row => columns.map(col => row[col.name] ?? ''))
-  ];
-  return generateMarkdownTable2D(arr);
+  // ヘッダー行
+  const headerRow: string[] = columns.map(col => col.header);
+  // データ行
+  const dataRows: string[][] = data.map(rowObj => columns.map(col => rowObj[col.name] ?? ''));
+  // 2次元配列化
+  const tableArr: string[][] = [headerRow, ...dataRows];
+  return generateMarkdownTable2D(tableArr);
 }
 
 /**
@@ -43,14 +50,16 @@ export function toMarkdownTable(columns: Column[], data: RowData[]): string {
  * @returns 2次元配列（ヘッダ行含む）
  */
 export function parseMarkdownTable2D(md: string): string[][] {
-  const lines = md
+  const lines: string[] = md
     .split('\n')
-    .map(l => l.trim())
-    .filter(l => l && l.startsWith('|') && l.endsWith('|'));
+    .map(line => line.trim())
+    .filter(line => line && line.startsWith('|') && line.endsWith('|'));
   if (lines.length < 2) return [];
-  return lines
-    .filter((_, i) => i === 0 || i > 1) // ヘッダとデータ行のみ
-    .map(row => row.slice(1, -1).split('|').map(c => c.trim()));
+  // 1行目: ヘッダー, 2行目: 区切り線, 3行目以降: データ
+  const tableRows: string[][] = lines
+    .filter((_, i) => i === 0 || i > 1)
+    .map(row => row.slice(1, -1).split('|').map(cell => cell.trim()));
+  return tableRows;
 }
 
 /**
@@ -58,10 +67,10 @@ export function parseMarkdownTable2D(md: string): string[][] {
  */
 export function generateMarkdownTable2D(data: string[][]): string {
   if (!data.length) return '';
-  const header = '| ' + data[0].join(' | ') + ' |';
-  const sep = '|' + data[0].map(() => '---').join('|') + '|';
-  const rows = data.slice(1).map(row => '| ' + row.join(' | ') + ' |');
-  return [header, sep, ...rows].join('\n');
+  const headerRow = '| ' + data[0].join(' | ') + ' |';
+  const separatorRow = '|' + data[0].map(() => '---').join('|') + '|';
+  const dataRows = data.slice(1).map(row => '| ' + row.join(' | ') + ' |');
+  return [headerRow, separatorRow, ...dataRows].join('\n');
 }
 
 export default parseMarkdownTable;
