@@ -9,7 +9,6 @@ body, .tableEditor, .tui-grid-root, .tui-grid-container {
   box-shadow: none !important;
   background: transparent !important;
 }
-@import "tui-grid/dist/tui-grid.min.css";
 .tableEditor {
   margin: 0;
   max-width: 100%;
@@ -33,7 +32,7 @@ body, .tableEditor, .tui-grid-root, .tui-grid-container {
 }
 
 .tableEditorButtons {
-  margin-top: 8px;
+  margin: 8px 0;
   display: flex;
   gap: 8px;
 }
@@ -63,4 +62,12 @@ body, .tableEditor, .tui-grid-root, .tui-grid-container {
   line-height: 1.4;
   text-overflow: unset !important;
   overflow: visible !important;
+}
+
+.jexcel_content {
+  white-space: pre-wrap;
+}
+
+.jexcel_content {
+  white-space: pre-wrap;
 }

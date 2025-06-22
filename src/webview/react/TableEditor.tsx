@@ -1,3 +1,52 @@
+// textareaカスタムエディタ
+const customTextareaEditor = {
+  createEditor: function (
+    cell: HTMLTableCellElement,
+    value: string,
+    x: number,
+    y: number,
+    instance: any
+  ) {
+    const textarea = document.createElement("textarea");
+    textarea.value = value || "";
+    textarea.style.width = "100%";
+    textarea.style.height = "100%";
+    textarea.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        instance.closeEditor(cell, true);
+      }
+    });
+    return { element: textarea, value: textarea.value };
+  },
+  getValue: function (editorObj: any) {
+    if (!editorObj) return "";
+    if (editorObj.element) return editorObj.element.value;
+    if (editorObj.value !== undefined) return editorObj.value;
+    if (editorObj instanceof HTMLTextAreaElement) return editorObj.value;
+    return "";
+  },
+  setValue: function (editorObj: any, value: string) {
+    if (!editorObj) return;
+    if (editorObj.element) editorObj.element.value = value;
+    else if (editorObj instanceof HTMLTextAreaElement) editorObj.value = value;
+  },
+  focus: function (editorObj: any) {
+    if (!editorObj) return;
+    if (editorObj.element) editorObj.element.focus();
+    else if (editorObj instanceof HTMLTextAreaElement) editorObj.focus();
+  },
+  closeEditor: function () {},
+  openEditor: function (
+    cell: HTMLTableCellElement,
+    value: string,
+    x: number,
+    y: number,
+    instance: any
+  ) {
+    return this.createEditor(cell, value, x, y, instance);
+  },
+};
 // VSCode Webview API型宣言
 declare function acquireVsCodeApi(): any;
 // VSCode Webview APIをwindow.vscodeにセット
@@ -9,48 +58,26 @@ declare global {
     vscode: {
       postMessage: (msg: any) => void;
     };
+    __INIT_MARKDOWN__?: string;
   }
 }
 
-import React, { useRef, useState, useEffect, useCallback } from "react";
-import { AgGridReact } from "ag-grid-react";
-import { ModuleRegistry, ClientSideRowModelModule, _EditCoreModule as EditCoreModule, ValidationModule, TextEditorModule, LargeTextEditorModule, CustomEditorModule, RowSelectionModule, RowApiModule, CellStyleModule, RowAutoHeightModule } from "ag-grid-community";
-import "ag-grid-community/styles/ag-theme-alpine.css";
-
-// AG Grid モジュール登録
-ModuleRegistry.registerModules([
-  ClientSideRowModelModule,
-  EditCoreModule,
-  ValidationModule,
-  TextEditorModule,
-  LargeTextEditorModule,
-  CustomEditorModule,
-  RowSelectionModule,
-  RowApiModule,
-  CellStyleModule,
-  RowAutoHeightModule,
-]);
+import React, { useRef, useEffect, useState, useCallback } from "react";
+import jspreadsheet from "jspreadsheet-ce";
+import "jspreadsheet-ce/dist/jspreadsheet.css";
 import TableEditorButtons from "./TableEditorButtons";
 import { parseMarkdownTable, toMarkdownTable } from "./utils/table";
 import { useTableEditorHandlers } from "./hooks/useTableEditorHandlers";
-import CustomTextareaEditor from "./CustomTextareaEditor";
-
-const DEFAULT_COLUMN_DEF = {
-  editable: true,
-  resizable: true,
-  sortable: true,
-  minWidth: 100,
-  autoHeight: true,
-  cellClass: "wrap-text-cell",
-  wrapText: true,
-};
+import styles from "./TableEditor.module.scss";
 
 export const TableEditor: React.FC = () => {
-  const gridRef = useRef<any>(null);
-  const [rowData, setRowData] = useState<any[]>([]);
-  const [columnDefs, setColumnDefs] = useState<any[]>([]);
+  const sheetRef = useRef<HTMLDivElement>(null);
+  const jspInstance = useRef<any>(null);
 
-  // 初期Markdownデータをstateにセット
+  // textareaカスタムエディタをグローバル登録
+  (jspreadsheet as any).editors = (jspreadsheet as any).editors || {};
+  (jspreadsheet as any).editors.textarea = customTextareaEditor;
+
   const initialMarkdown = window.__INIT_MARKDOWN__ || "";
   const [markdown, setMarkdown] = useState(initialMarkdown);
   const [isModified, setIsModified] = useState(false);
@@ -58,78 +85,133 @@ export const TableEditor: React.FC = () => {
   // markdownからcolumns/dataを生成
   const { columns, data } = React.useMemo(() => parseMarkdownTable(markdown), [markdown]);
 
-  // 初回マウント時のみrowData/columnDefsをセット
+  // jspreadsheetの初期化・破棄
   useEffect(() => {
-    if (!rowData.length && !columnDefs.length) {
-      setRowData(data);
-      setColumnDefs(
-        columns.map(col => ({
-          ...DEFAULT_COLUMN_DEF,
-          field: col.name,
-          cellEditor: CustomTextareaEditor,
-          cellEditorPopup: false,
-          cellEditorParams: {},
-          cellRenderer: (params: any) => {
-            if (typeof params.value !== "string") return params.value;
-            return (
-              <span
-                dangerouslySetInnerHTML={{
-                  __html: params.value.replace(/\n/g, "<br>")
-                }}
-              />
-            );
-          },
-        }))
-      );
-    }
-  }, []);
+    if (!sheetRef.current) return;
 
-  // 編集検知: GridインスタンスのafterChangeイベントで検知
-  useEffect(() => {
-    const gridInst = gridRef.current?.getInstance?.();
-    if (!gridInst) return;
-    const handler = () => {
-      if (!isModified) {
+    // 既存のインスタンスがあれば破棄
+    if (jspInstance.current) {
+      jspInstance.current.destroy();
+      jspInstance.current = null;
+    }
+
+    // カラム定義
+    const colDefs = columns.map(col => ({
+      title: col.name,
+      width: 120,
+      align: "left" as "left",
+      wrap: true,
+      wordWrap: true,
+      type: "text" as const,
+    }));
+
+    // jspreadsheet初期化
+    jspInstance.current = jspreadsheet(sheetRef.current, {
+      data,
+      columns: colDefs as any,
+      minDimensions: [columns.length || 1, data.length || 1],
+      editable: true,
+      wordWrap: true,
+      allowInsertRow: true,
+      allowInsertColumn: true,
+      allowDeleteRow: true,
+      allowDeleteColumn: true,
+      onbeforechange: (
+        element: any,
+        cell: HTMLTableCellElement,
+        colIndex: string | number,
+        rowIndex: string | number,
+        newValue: any
+      ) => {
+        return newValue;
+      },
+      onchange: () => {
         setIsModified(true);
         if (window.vscode && typeof window.vscode.postMessage === "function") {
           window.vscode.postMessage({ type: "modified" });
         }
+      },
+    });
+
+    setIsModified(false);
+
+    return () => {
+      if (jspInstance.current) {
+        jspInstance.current.destroy();
+        jspInstance.current = null;
       }
     };
-    gridInst.on('afterChange', handler);
-    return () => {
-      gridInst.off('afterChange', handler);
-    };
-  }, [isModified]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [markdown]);
 
   // 保存処理
-  const handleSave = () => {
-    if (!gridRef.current || !gridRef.current.api) return;
-    const currentData: any[] = [];
-    gridRef.current.api.forEachNode((node: any) => {
-      if (node.data) currentData.push(node.data);
+  const handleSave = useCallback(() => {
+    if (!jspInstance.current) return;
+    const columnsOption = jspInstance.current.options.columns || [];
+    // DOMからヘッダー文字列を取得
+    let domHeaders: string[] = [];
+    if (sheetRef.current) {
+      const ths = sheetRef.current.querySelectorAll('.jexcel thead th');
+      domHeaders = Array.from(ths).map(th => (th as HTMLElement).innerText.trim());
+    }
+    const columnsForSave = columnsOption.map((col: any, i: number) => ({
+      name: (domHeaders[i] && domHeaders[i].length > 0) ? domHeaders[i] : `__EMPTY__${i+1}`,
+      header: domHeaders[i] || col.title || "",
+    }));
+    const currentData = jspInstance.current.getData();
+    console.log("save columnsForSave", columnsForSave);
+    console.log("save currentData", currentData);
+    const safeData = Array.isArray(currentData) ? currentData : [];
+    // 2次元配列→オブジェクト配列に変換
+    const dataObjects = safeData.map((row: any[]) => {
+      const obj: Record<string, string> = {};
+      columnsForSave.forEach((col: { name: string }, i: number) => {
+        obj[col.name] = row[i] ?? "";
+      });
+      return obj;
     });
-    const md = toMarkdownTable(columns, currentData);
+    const md = toMarkdownTable(columnsForSave, dataObjects);
+    console.log("save md", md);
     if (window.vscode && typeof window.vscode.postMessage === "function") {
       window.vscode.postMessage({ type: "save", markdown: md });
       window.vscode.postMessage({ type: "saved" });
     }
     setIsModified(false);
-  };
+  }, []);
 
   // Save & Closeボタン処理
-  const handleSaveAndClose = () => {
-    if (!gridRef.current || !gridRef.current.api) return;
-    const currentData: any[] = [];
-    gridRef.current.api.forEachNode((node: any) => {
-      if (node.data) currentData.push(node.data);
+  const handleSaveAndClose = useCallback(() => {
+    if (!jspInstance.current) return;
+    const columnsOption = jspInstance.current.options.columns || [];
+    // DOMからヘッダー文字列を取得
+    let domHeaders: string[] = [];
+    if (sheetRef.current) {
+      const ths = sheetRef.current.querySelectorAll('.jexcel thead th');
+      domHeaders = Array.from(ths).map(th => (th as HTMLElement).innerText.trim());
+    }
+    const columnsForSave = columnsOption.map((col: any, i: number) => ({
+      name: (domHeaders[i] && domHeaders[i].length > 0) ? domHeaders[i] : `__EMPTY__${i+1}`,
+      header: domHeaders[i] || col.title || "",
+    }));
+    const currentData = jspInstance.current.getData();
+    console.log("saveAndClose columnsForSave", columnsForSave);
+    console.log("saveAndClose currentData", currentData);
+    const safeData = Array.isArray(currentData) ? currentData : [];
+    // 2次元配列→オブジェクト配列に変換
+    const dataObjects = safeData.map((row: any[]) => {
+      const obj: Record<string, string> = {};
+      columnsForSave.forEach((col: { name: string }, i: number) => {
+        obj[col.name] = row[i] ?? "";
+      });
+      return obj;
     });
-    const md = toMarkdownTable(columns, currentData);
+    const md = toMarkdownTable(columnsForSave, dataObjects);
+    console.log("saveAndClose md", md);
     if (window.vscode && typeof window.vscode.postMessage === "function") {
       window.vscode.postMessage({ type: "saveAndClose", markdown: md });
     }
     setIsModified(false);
-  };
+  }, []);
 
   // Cmd+S/Ctrl+S ショートカット対応
   useEffect(() => {
@@ -141,98 +223,94 @@ export const TableEditor: React.FC = () => {
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  });
+  }, [handleSave]);
 
+  // Markdown初期化
   useEffect(() => {
     setMarkdown(initialMarkdown);
     setIsModified(false);
-  }, []);
+  }, [initialMarkdown]);
 
+  // 行・列追加ハンドラ
   const { handleAddRow, handleAddColumn } = useTableEditorHandlers({
-    columnDefs,
-    rowData,
-    setRowData,
+    columnDefs: columns,
+    rowData: data,
     setMarkdown,
     setIsModified,
   });
 
-    // wrapText/autoHeightのon/off切替（単一列）
-    const handleToggleWrap = (field: string) => {
-      setColumnDefs((prevDefs: any[]) =>
-        prevDefs.map(def => {
-          if (def.field === field) {
-            const isWrapped = def.cellClass === "wrap-text-cell";
-            return {
-              ...def,
-              cellClass: isWrapped ? undefined : "wrap-text-cell",
-              autoHeight: !isWrapped,
-              wrapText: !isWrapped,
-              minWidth: def.minWidth,
-              maxWidth: def.maxWidth,
-            };
-          }
-          return def;
-        })
-      );
-    };
-  
-    // wrapText/autoHeightのon/off切替（全列一括）
-    const handleToggleWrapAll = () => {
-      setColumnDefs((prevDefs: any[]) => {
-        const allWrapped = prevDefs.every(def => def.cellClass === "wrap-text-cell");
-        return prevDefs.map(def => {
-          // 既存のhandleToggleWrapロジックを流用
-          const isWrapped = def.cellClass === "wrap-text-cell";
-          const nextWrapped = allWrapped ? false : true;
-          return {
-            ...def,
-            cellClass: nextWrapped ? "wrap-text-cell" : undefined,
-            autoHeight: nextWrapped,
-            wrapText: nextWrapped,
-            minWidth: def.minWidth,
-            maxWidth: def.maxWidth,
-          };
-        });
+  // wrapText/autoHeightのon/off切替（jspreadsheetはwrap: true/falseで制御）
+  const handleToggleWrapAll = () => {
+    if (!jspInstance.current) return;
+    const colDefs = jspInstance.current.options.columns;
+    const allWrapped = colDefs.every((col: any) => col.wrap);
+    colDefs.forEach((col: any) => {
+      col.wrap = !allWrapped;
+    });
+    jspInstance.current.refresh();
+  };
+
+  // 選択列削除ハンドラ
+  const handleDeleteSelectedColumn = useCallback(() => {
+    if (!jspInstance.current) return;
+    const selection = jspInstance.current.getSelected?.();
+    if (!selection || selection.length === 0) {
+      alert("削除する列が選択されていません。");
+      return;
+    }
+    // [[[startRow, startCol], [endRow, endCol]]] の構造
+    const [startCell, endCell] = selection[0];
+    const startCol = startCell[1];
+    const endCol = endCell[1];
+    if (
+      typeof startCol !== "number" ||
+      typeof endCol !== "number" ||
+      startCol > endCol
+    ) {
+      alert("正しい列範囲が選択されていません。");
+      return;
+    }
+    // columns/dataを取得
+    const { columns, data } = parseMarkdownTable(markdown);
+    // 削除対象のカラムインデックス配列
+    const delColIdxs: number[] = [];
+    for (let col = startCol; col <= endCol; col++) {
+      delColIdxs.push(col);
+    }
+    // 新しいcolumns
+    const newColumns = columns.filter((_, idx) => !delColIdxs.includes(idx));
+    // 新しいdata
+    const newData = data.map(row => {
+      const newRow = { ...row };
+      delColIdxs.forEach(idx => {
+        if (columns[idx]) delete newRow[columns[idx].name];
       });
-    };
+      return newRow;
+    });
+    // Markdown再生成
+    const newMarkdown = toMarkdownTable(newColumns, newData);
+    if (jspInstance.current) {
+      jspInstance.current.destroy();
+      jspInstance.current = null;
+    }
+    setMarkdown(newMarkdown);
+    setIsModified(true);
+  }, [setMarkdown, setIsModified, markdown]);
 
   return (
     <div>
-      <div className="tableEditor">
+      <div className={styles.tableEditor}>
         <TableEditorButtons
           onAddRow={handleAddRow}
           onAddColumn={handleAddColumn}
+          onDeleteSelectedColumn={handleDeleteSelectedColumn}
           onSave={handleSave}
           onSaveAndClose={handleSaveAndClose}
           isModified={isModified}
-          wrapAllChecked={columnDefs.length > 0 && columnDefs.every(def => def.cellClass === "wrap-text-cell")}
+          wrapAllChecked={columns.length > 0 && columns.every(col => col.wrap)}
           onToggleWrapAll={handleToggleWrapAll}
         />
-        <div className="ag-theme-alpine" style={{ width: "100%", minHeight: 300 }}>
-          <AgGridReact
-            ref={gridRef}
-            columnDefs={columnDefs}
-            rowData={rowData}
-            modules={[ClientSideRowModelModule, EditCoreModule, ValidationModule, TextEditorModule, RowSelectionModule, RowApiModule]}
-            defaultColDef={DEFAULT_COLUMN_DEF}
-
-            onCellValueChanged={e => {
-              const updatedData: any[] = [];
-              e.api.forEachNode((node) => {
-                if (node.data) updatedData.push(node.data);
-              });
-              setRowData(updatedData);
-              if (!isModified) {
-                setIsModified(true);
-                if (window.vscode && typeof window.vscode.postMessage === "function") {
-                  window.vscode.postMessage({ type: "modified" });
-                }
-              }
-            }}
-            domLayout="autoHeight"
-            rowSelection={{ mode: "multiRow" }}
-          />
-        </div>
+        <div ref={sheetRef} style={{ width: "100%", minHeight: 300 }} />
       </div>
     </div>
   );

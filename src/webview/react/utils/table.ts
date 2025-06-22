@@ -13,7 +13,7 @@ export function parseMarkdownTable(md: string): { columns: any[]; data: any[] } 
   if (lines.length < 2) return { columns: [], data: [] };
   const header = lines[0].slice(1, -1).split('|').map(h => h.trim());
   const columns = header.map((h, i) => ({
-    name: `col${i + 1}`,
+    name: h !== "" ? h : `__EMPTY__${i + 1}`,
     header: h
   }));
   const data = lines.slice(2).map(row => {

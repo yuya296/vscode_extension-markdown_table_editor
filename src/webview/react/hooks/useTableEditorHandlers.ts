@@ -7,7 +7,6 @@ type RowData = Record<string, any>;
 interface UseTableEditorHandlersProps {
   columnDefs: ColumnDef[];
   rowData: RowData[];
-  setRowData: React.Dispatch<React.SetStateAction<RowData[]>>;
   setMarkdown: (md: string) => void;
   setIsModified: (v: boolean) => void;
 }
@@ -15,18 +14,21 @@ interface UseTableEditorHandlersProps {
 export function useTableEditorHandlers({
   columnDefs,
   rowData,
-  setRowData,
   setMarkdown,
   setIsModified,
 }: UseTableEditorHandlersProps) {
   // 行追加
   const handleAddRow = useCallback(() => {
-    setRowData(prev => {
-      const newData = [...prev, {}];
-      setIsModified(true);
-      return newData;
-    });
-  }, [setRowData, setIsModified]);
+    // 新しい行データを生成し、markdownを更新
+    const newData = [...rowData, {}];
+    setMarkdown(
+      toMarkdownTable(
+        columnDefs,
+        newData
+      )
+    );
+    setIsModified(true);
+  }, [rowData, columnDefs, setMarkdown, setIsModified]);
 
   // 列追加
   const handleAddColumn = useCallback(() => {
@@ -35,12 +37,15 @@ export function useTableEditorHandlers({
     const newColHeader = `Column${newColIdx}`;
     const newColumns = [
       ...columnDefs,
-      { field: newColName, headerName: newColHeader, editable: true }
+      { name: newColName, header: newColHeader, editable: true }
     ];
-    const newData = rowData.map(row => ({ ...row, [newColName]: "" }));
+    const newData =
+      rowData.length > 0
+        ? rowData.map(row => ({ ...row, [newColName]: "" }))
+        : [{ [newColName]: "" }];
     setMarkdown(
       toMarkdownTable(
-        newColumns.map(col => ({ name: col.field, header: col.headerName })),
+        newColumns,
         newData
       )
     );
