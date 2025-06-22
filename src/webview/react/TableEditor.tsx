@@ -36,7 +36,7 @@ const customTextareaEditor = {
     if (editorObj.element) editorObj.element.focus();
     else if (editorObj instanceof HTMLTextAreaElement) editorObj.focus();
   },
-  closeEditor: function () {},
+  closeEditor: function () { },
   openEditor: function (
     cell: HTMLTableCellElement,
     value: string,
@@ -66,7 +66,7 @@ import React, { useRef, useEffect, useState, useCallback } from "react";
 import jspreadsheet from "jspreadsheet-ce";
 import "jspreadsheet-ce/dist/jspreadsheet.css";
 import TableEditorButtons from "./TableEditorButtons";
-import { parseMarkdownTable, toMarkdownTable } from "./utils/table";
+import { parseMarkdownTable, toMarkdownTable, Column, RowData } from "./utils/table";
 import { useTableEditorHandlers } from "./hooks/useTableEditorHandlers";
 import styles from "./TableEditor.module.scss";
 
@@ -79,7 +79,7 @@ export const TableEditor: React.FC = () => {
   (jspreadsheet as any).editors.textarea = customTextareaEditor;
 
   const initialMarkdown = window.__INIT_MARKDOWN__ || "";
-  const [markdown, setMarkdown] = useState(initialMarkdown);
+  const [markdown, setMarkdown] = useState<string>(initialMarkdown);
   const [isModified, setIsModified] = useState(false);
 
   // markdownからcolumns/dataを生成
@@ -88,24 +88,19 @@ export const TableEditor: React.FC = () => {
   // jspreadsheetの初期化・破棄
   useEffect(() => {
     if (!sheetRef.current) return;
-
-    // 既存のインスタンスがあれば破棄
     if (jspInstance.current) {
       jspInstance.current.destroy();
       jspInstance.current = null;
     }
-
     // カラム定義
     const colDefs = columns.map(col => ({
       title: col.name,
       width: 120,
-      align: "left" as "left",
+      align: "left" as const,
       wrap: true,
       wordWrap: true,
       type: "text" as const,
     }));
-
-    // jspreadsheet初期化
     jspInstance.current = jspreadsheet(sheetRef.current, {
       data,
       columns: colDefs as any,
@@ -122,9 +117,7 @@ export const TableEditor: React.FC = () => {
         colIndex: string | number,
         rowIndex: string | number,
         newValue: any
-      ) => {
-        return newValue;
-      },
+      ) => newValue,
       onchange: () => {
         setIsModified(true);
         if (window.vscode && typeof window.vscode.postMessage === "function") {
@@ -132,9 +125,7 @@ export const TableEditor: React.FC = () => {
         }
       },
     });
-
     setIsModified(false);
-
     return () => {
       if (jspInstance.current) {
         jspInstance.current.destroy();
@@ -148,30 +139,25 @@ export const TableEditor: React.FC = () => {
   const handleSave = useCallback(() => {
     if (!jspInstance.current) return;
     const columnsOption = jspInstance.current.options.columns || [];
-    // DOMからヘッダー文字列を取得
     let domHeaders: string[] = [];
     if (sheetRef.current) {
       const ths = sheetRef.current.querySelectorAll('.jexcel thead th');
       domHeaders = Array.from(ths).map(th => (th as HTMLElement).innerText.trim());
     }
-    const columnsForSave = columnsOption.map((col: any, i: number) => ({
-      name: (domHeaders[i] && domHeaders[i].length > 0) ? domHeaders[i] : `__EMPTY__${i+1}`,
+    const columnsForSave: Column[] = columnsOption.map((col: any, i: number) => ({
+      name: (domHeaders[i] && domHeaders[i].length > 0) ? domHeaders[i] : `__EMPTY__${i + 1}`,
       header: domHeaders[i] || col.title || "",
     }));
     const currentData = jspInstance.current.getData();
-    console.log("save columnsForSave", columnsForSave);
-    console.log("save currentData", currentData);
     const safeData = Array.isArray(currentData) ? currentData : [];
-    // 2次元配列→オブジェクト配列に変換
-    const dataObjects = safeData.map((row: any[]) => {
-      const obj: Record<string, string> = {};
-      columnsForSave.forEach((col: { name: string }, i: number) => {
+    const dataObjects: RowData[] = safeData.map((row: any[]) => {
+      const obj: RowData = {};
+      columnsForSave.forEach((col, i) => {
         obj[col.name] = row[i] ?? "";
       });
       return obj;
     });
     const md = toMarkdownTable(columnsForSave, dataObjects);
-    console.log("save md", md);
     if (window.vscode && typeof window.vscode.postMessage === "function") {
       window.vscode.postMessage({ type: "save", markdown: md });
       window.vscode.postMessage({ type: "saved" });
@@ -183,30 +169,25 @@ export const TableEditor: React.FC = () => {
   const handleSaveAndClose = useCallback(() => {
     if (!jspInstance.current) return;
     const columnsOption = jspInstance.current.options.columns || [];
-    // DOMからヘッダー文字列を取得
     let domHeaders: string[] = [];
     if (sheetRef.current) {
       const ths = sheetRef.current.querySelectorAll('.jexcel thead th');
       domHeaders = Array.from(ths).map(th => (th as HTMLElement).innerText.trim());
     }
-    const columnsForSave = columnsOption.map((col: any, i: number) => ({
-      name: (domHeaders[i] && domHeaders[i].length > 0) ? domHeaders[i] : `__EMPTY__${i+1}`,
+    const columnsForSave: Column[] = columnsOption.map((col: any, i: number) => ({
+      name: (domHeaders[i] && domHeaders[i].length > 0) ? domHeaders[i] : `__EMPTY__${i + 1}`,
       header: domHeaders[i] || col.title || "",
     }));
     const currentData = jspInstance.current.getData();
-    console.log("saveAndClose columnsForSave", columnsForSave);
-    console.log("saveAndClose currentData", currentData);
     const safeData = Array.isArray(currentData) ? currentData : [];
-    // 2次元配列→オブジェクト配列に変換
-    const dataObjects = safeData.map((row: any[]) => {
-      const obj: Record<string, string> = {};
-      columnsForSave.forEach((col: { name: string }, i: number) => {
+    const dataObjects: RowData[] = safeData.map((row: any[]) => {
+      const obj: RowData = {};
+      columnsForSave.forEach((col, i) => {
         obj[col.name] = row[i] ?? "";
       });
       return obj;
     });
     const md = toMarkdownTable(columnsForSave, dataObjects);
-    console.log("saveAndClose md", md);
     if (window.vscode && typeof window.vscode.postMessage === "function") {
       window.vscode.postMessage({ type: "saveAndClose", markdown: md });
     }
@@ -239,7 +220,7 @@ export const TableEditor: React.FC = () => {
     setIsModified,
   });
 
-  // wrapText/autoHeightのon/off切替（jspreadsheetはwrap: true/falseで制御）
+  // wrapText/autoHeightのon/off切替
   const handleToggleWrapAll = () => {
     if (!jspInstance.current) return;
     const colDefs = jspInstance.current.options.columns;
@@ -249,6 +230,13 @@ export const TableEditor: React.FC = () => {
     });
     jspInstance.current.refresh();
   };
+
+  // 全列wrap状態かどうかを判定
+  const wrapAllChecked = (() => {
+    if (!jspInstance.current) return false;
+    const colDefs = jspInstance.current.options.columns;
+    return colDefs.length > 0 && colDefs.every((col: any) => col.wrap);
+  })();
 
   // 選択列削除ハンドラ
   const handleDeleteSelectedColumn = useCallback(() => {
@@ -307,7 +295,7 @@ export const TableEditor: React.FC = () => {
           onSave={handleSave}
           onSaveAndClose={handleSaveAndClose}
           isModified={isModified}
-          wrapAllChecked={columns.length > 0 && columns.every(col => col.wrap)}
+          wrapAllChecked={wrapAllChecked}
           onToggleWrapAll={handleToggleWrapAll}
         />
         <div ref={sheetRef} style={{ width: "100%", minHeight: 300 }} />

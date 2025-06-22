@@ -1,11 +1,8 @@
 import { useCallback } from "react";
-import { toMarkdownTable } from "../utils/table";
-
-type ColumnDef = { field: string; headerName: string; editable: boolean };
-type RowData = Record<string, any>;
+import { toMarkdownTable, Column, RowData } from "../utils/table";
 
 interface UseTableEditorHandlersProps {
-  columnDefs: ColumnDef[];
+  columnDefs: Column[];
   rowData: RowData[];
   setMarkdown: (md: string) => void;
   setIsModified: (v: boolean) => void;
@@ -21,12 +18,7 @@ export function useTableEditorHandlers({
   const handleAddRow = useCallback(() => {
     // 新しい行データを生成し、markdownを更新
     const newData = [...rowData, {}];
-    setMarkdown(
-      toMarkdownTable(
-        columnDefs,
-        newData
-      )
-    );
+    setMarkdown(toMarkdownTable(columnDefs, newData));
     setIsModified(true);
   }, [rowData, columnDefs, setMarkdown, setIsModified]);
 
@@ -35,20 +27,15 @@ export function useTableEditorHandlers({
     const newColIdx = columnDefs.length + 1;
     const newColName = `col${newColIdx}`;
     const newColHeader = `Column${newColIdx}`;
-    const newColumns = [
+    const newColumns: Column[] = [
       ...columnDefs,
-      { name: newColName, header: newColHeader, editable: true }
+      { name: newColName, header: newColHeader }
     ];
     const newData =
       rowData.length > 0
         ? rowData.map(row => ({ ...row, [newColName]: "" }))
         : [{ [newColName]: "" }];
-    setMarkdown(
-      toMarkdownTable(
-        newColumns,
-        newData
-      )
-    );
+    setMarkdown(toMarkdownTable(newColumns, newData));
     setIsModified(true);
   }, [columnDefs, rowData, setMarkdown, setIsModified]);
 
