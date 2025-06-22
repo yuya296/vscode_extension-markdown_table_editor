@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { toMarkdownTable, parseMarkdownTable, Column, RowData } from "../utils/table";
+import parseMarkdownTable, { toMarkdownTable, Column, RowData } from "../utils/table";
 
 interface UseTableEditorHandlersProps {
   columnDefs: Column[];

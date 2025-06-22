@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { parseMarkdownTable } from "../utils/table";
+import parseMarkdownTable from "../utils/table";
 
 export function useTableData(markdown: string) {
     return useMemo(() => {

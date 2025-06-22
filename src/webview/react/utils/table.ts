@@ -63,3 +63,5 @@ export function generateMarkdownTable2D(data: string[][]): string {
   const rows = data.slice(1).map(row => '| ' + row.join(' | ') + ' |');
   return [header, sep, ...rows].join('\n');
 }
+
+export default parseMarkdownTable;
