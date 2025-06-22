@@ -1,52 +1,3 @@
-// textareaカスタムエディタ
-const customTextareaEditor = {
-  createEditor: function (
-    cell: HTMLTableCellElement,
-    value: string,
-    x: number,
-    y: number,
-    instance: any
-  ) {
-    const textarea = document.createElement("textarea");
-    textarea.value = value || "";
-    textarea.style.width = "100%";
-    textarea.style.height = "100%";
-    textarea.addEventListener("keydown", function (e) {
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        instance.closeEditor(cell, true);
-      }
-    });
-    return { element: textarea, value: textarea.value };
-  },
-  getValue: function (editorObj: any) {
-    if (!editorObj) return "";
-    if (editorObj.element) return editorObj.element.value;
-    if (editorObj.value !== undefined) return editorObj.value;
-    if (editorObj instanceof HTMLTextAreaElement) return editorObj.value;
-    return "";
-  },
-  setValue: function (editorObj: any, value: string) {
-    if (!editorObj) return;
-    if (editorObj.element) editorObj.element.value = value;
-    else if (editorObj instanceof HTMLTextAreaElement) editorObj.value = value;
-  },
-  focus: function (editorObj: any) {
-    if (!editorObj) return;
-    if (editorObj.element) editorObj.element.focus();
-    else if (editorObj instanceof HTMLTextAreaElement) editorObj.focus();
-  },
-  closeEditor: function () { },
-  openEditor: function (
-    cell: HTMLTableCellElement,
-    value: string,
-    x: number,
-    y: number,
-    instance: any
-  ) {
-    return this.createEditor(cell, value, x, y, instance);
-  },
-};
 // VSCode Webview API型宣言
 declare function acquireVsCodeApi(): any;
 // VSCode Webview APIをwindow.vscodeにセット
@@ -63,7 +14,7 @@ declare global {
 }
 
 import React, { useRef, useEffect, useState, useCallback } from "react";
-import jspreadsheet from "jspreadsheet-ce";
+import { Spreadsheet, Worksheet, jspreadsheet } from "@jspreadsheet-ce/react";
 import "jspreadsheet-ce/dist/jspreadsheet.css";
 import TableEditorButtons from "./TableEditorButtons";
 import { parseMarkdownTable, toMarkdownTable, Column, RowData } from "./utils/table";
@@ -71,128 +22,102 @@ import { useTableEditorHandlers } from "./hooks/useTableEditorHandlers";
 import styles from "./TableEditor.module.scss";
 
 export const TableEditor: React.FC = () => {
-  const sheetRef = useRef<HTMLDivElement>(null);
   const jspInstance = useRef<any>(null);
-
-  // textareaカスタムエディタをグローバル登録
-  (jspreadsheet as any).editors = (jspreadsheet as any).editors || {};
-  (jspreadsheet as any).editors.textarea = customTextareaEditor;
 
   const initialMarkdown = window.__INIT_MARKDOWN__ || "";
   const [markdown, setMarkdown] = useState<string>(initialMarkdown);
   const [isModified, setIsModified] = useState(false);
 
   // markdownからcolumns/dataを生成
-  const { columns, data } = React.useMemo(() => parseMarkdownTable(markdown), [markdown]);
+  const { columns, data } = React.useMemo(() => {
+    const result = parseMarkdownTable(markdown);
+    console.log("parseMarkdownTable result:", { columns: result.columns, data: result.data, markdown });
 
-  // jspreadsheetの初期化・破棄
-  useEffect(() => {
-    if (!sheetRef.current) return;
-    if (jspInstance.current) {
-      jspInstance.current.destroy();
-      jspInstance.current = null;
+    // markdownが空または無効な場合はデフォルトテーブルを生成
+    if (result.columns.length === 0) {
+      console.log("Creating default table");
+      return {
+        columns: [
+          { name: "Column1", header: "Column1" },
+          { name: "Column2", header: "Column2" },
+          { name: "Column3", header: "Column3" }
+        ],
+        data: [
+          { "Column1": "", "Column2": "", "Column3": "" },
+          { "Column1": "", "Column2": "", "Column3": "" },
+          { "Column1": "", "Column2": "", "Column3": "" }
+        ]
+      };
     }
-    // カラム定義
-    const colDefs = columns.map(col => ({
-      title: col.name,
-      width: 120,
-      align: "left" as const,
-      wrap: true,
-      wordWrap: true,
-      type: "text" as const,
-    }));
-    jspInstance.current = jspreadsheet(sheetRef.current, {
-      data,
-      columns: colDefs as any,
-      minDimensions: [columns.length || 1, data.length || 1],
-      editable: true,
-      wordWrap: true,
-      allowInsertRow: true,
-      allowInsertColumn: true,
-      allowDeleteRow: true,
-      allowDeleteColumn: true,
-      onbeforechange: (
-        element: any,
-        cell: HTMLTableCellElement,
-        colIndex: string | number,
-        rowIndex: string | number,
-        newValue: any
-      ) => newValue,
-      onchange: () => {
-        setIsModified(true);
-        if (window.vscode && typeof window.vscode.postMessage === "function") {
-          window.vscode.postMessage({ type: "modified" });
-        }
-      },
-    });
-    setIsModified(false);
-    return () => {
-      if (jspInstance.current) {
-        jspInstance.current.destroy();
-        jspInstance.current = null;
-      }
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
+    return result;
   }, [markdown]);
+
+  // カラム定義
+  const colDefs = columns.map(col => ({
+    title: col.name,
+    width: 120,
+    align: "left" as const,
+    wrap: true,
+    wordWrap: true,
+    type: "text" as const,
+  }));
+
+  console.log("colDefs:", colDefs);
+  console.log("data:", data);
+  console.log("initialMarkdown:", initialMarkdown);
+
+  // dataを2次元配列に変換（jspreadsheetが期待する形式）
+  const tableData = data.map(row =>
+    columns.map(col => row[col.name] || "")
+  );
+
+  console.log("tableData:", tableData);
+
+  // Markdown初期化
+  useEffect(() => {
+    setMarkdown(initialMarkdown);
+    setIsModified(false);
+  }, [initialMarkdown]);
 
   // 保存処理
   const handleSave = useCallback(() => {
-    if (!jspInstance.current) return;
-    const columnsOption = jspInstance.current.options.columns || [];
-    let domHeaders: string[] = [];
-    if (sheetRef.current) {
-      const ths = sheetRef.current.querySelectorAll('.jexcel thead th');
-      domHeaders = Array.from(ths).map(th => (th as HTMLElement).innerText.trim());
-    }
-    const columnsForSave: Column[] = columnsOption.map((col: any, i: number) => ({
-      name: (domHeaders[i] && domHeaders[i].length > 0) ? domHeaders[i] : `__EMPTY__${i + 1}`,
-      header: domHeaders[i] || col.title || "",
-    }));
-    const currentData = jspInstance.current.getData();
+    if (!jspInstance.current || !jspInstance.current[0]) return;
+    const currentData = jspInstance.current[0].getData();
     const safeData = Array.isArray(currentData) ? currentData : [];
     const dataObjects: RowData[] = safeData.map((row: any[]) => {
       const obj: RowData = {};
-      columnsForSave.forEach((col, i) => {
+      columns.forEach((col, i) => {
         obj[col.name] = row[i] ?? "";
       });
       return obj;
     });
-    const md = toMarkdownTable(columnsForSave, dataObjects);
+    const md = toMarkdownTable(columns, dataObjects);
     if (window.vscode && typeof window.vscode.postMessage === "function") {
       window.vscode.postMessage({ type: "save", markdown: md });
       window.vscode.postMessage({ type: "saved" });
     }
     setIsModified(false);
-  }, []);
+  }, [columns]);
 
   // Save & Closeボタン処理
   const handleSaveAndClose = useCallback(() => {
-    if (!jspInstance.current) return;
-    const columnsOption = jspInstance.current.options.columns || [];
-    let domHeaders: string[] = [];
-    if (sheetRef.current) {
-      const ths = sheetRef.current.querySelectorAll('.jexcel thead th');
-      domHeaders = Array.from(ths).map(th => (th as HTMLElement).innerText.trim());
-    }
-    const columnsForSave: Column[] = columnsOption.map((col: any, i: number) => ({
-      name: (domHeaders[i] && domHeaders[i].length > 0) ? domHeaders[i] : `__EMPTY__${i + 1}`,
-      header: domHeaders[i] || col.title || "",
-    }));
-    const currentData = jspInstance.current.getData();
+    if (!jspInstance.current || !jspInstance.current[0]) return;
+    const currentData = jspInstance.current[0].getData();
     const safeData = Array.isArray(currentData) ? currentData : [];
     const dataObjects: RowData[] = safeData.map((row: any[]) => {
       const obj: RowData = {};
-      columnsForSave.forEach((col, i) => {
+      columns.forEach((col, i) => {
         obj[col.name] = row[i] ?? "";
       });
       return obj;
     });
-    const md = toMarkdownTable(columnsForSave, dataObjects);
+    const md = toMarkdownTable(columns, dataObjects);
     if (window.vscode && typeof window.vscode.postMessage === "function") {
       window.vscode.postMessage({ type: "saveAndClose", markdown: md });
     }
     setIsModified(false);
-  }, []);
+  }, [columns]);
 
   // Cmd+S/Ctrl+S ショートカット対応
   useEffect(() => {
@@ -222,26 +147,26 @@ export const TableEditor: React.FC = () => {
 
   // wrapText/autoHeightのon/off切替
   const handleToggleWrapAll = () => {
-    if (!jspInstance.current) return;
-    const colDefs = jspInstance.current.options.columns;
+    if (!jspInstance.current || !jspInstance.current[0]) return;
+    const colDefs = jspInstance.current[0].options.columns;
     const allWrapped = colDefs.every((col: any) => col.wrap);
     colDefs.forEach((col: any) => {
       col.wrap = !allWrapped;
     });
-    jspInstance.current.refresh();
+    jspInstance.current[0].refresh();
   };
 
   // 全列wrap状態かどうかを判定
   const wrapAllChecked = (() => {
-    if (!jspInstance.current) return false;
-    const colDefs = jspInstance.current.options.columns;
+    if (!jspInstance.current || !jspInstance.current[0]) return false;
+    const colDefs = jspInstance.current[0].options.columns;
     return colDefs.length > 0 && colDefs.every((col: any) => col.wrap);
   })();
 
   // 選択列削除ハンドラ
   const handleDeleteSelectedColumn = useCallback(() => {
-    if (!jspInstance.current) return;
-    const selection = jspInstance.current.getSelected?.();
+    if (!jspInstance.current || !jspInstance.current[0]) return;
+    const selection = jspInstance.current[0].getSelected?.();
     if (!selection || selection.length === 0) {
       alert("削除する列が選択されていません。");
       return;
@@ -277,10 +202,6 @@ export const TableEditor: React.FC = () => {
     });
     // Markdown再生成
     const newMarkdown = toMarkdownTable(newColumns, newData);
-    if (jspInstance.current) {
-      jspInstance.current.destroy();
-      jspInstance.current = null;
-    }
     setMarkdown(newMarkdown);
     setIsModified(true);
   }, [setMarkdown, setIsModified, markdown]);
@@ -298,7 +219,32 @@ export const TableEditor: React.FC = () => {
           wrapAllChecked={wrapAllChecked}
           onToggleWrapAll={handleToggleWrapAll}
         />
-        <div ref={sheetRef} style={{ width: "100%", minHeight: 300 }} />
+        <Spreadsheet ref={jspInstance}>
+          <Worksheet
+            data={tableData}
+            columns={colDefs as any}
+            minDimensions={[columns.length || 1, data.length || 1]}
+            editable={true}
+            wordWrap={true}
+            allowInsertRow={true}
+            allowInsertColumn={true}
+            allowDeleteRow={true}
+            allowDeleteColumn={true}
+            onbeforechange={(
+              element: any,
+              cell: HTMLTableCellElement,
+              colIndex: string | number,
+              rowIndex: string | number,
+              newValue: any
+            ) => newValue}
+            onchange={() => {
+              setIsModified(true);
+              if (window.vscode && typeof window.vscode.postMessage === "function") {
+                window.vscode.postMessage({ type: "modified" });
+              }
+            }}
+          />
+        </Spreadsheet>
       </div>
     </div>
   );
