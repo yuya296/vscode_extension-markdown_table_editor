@@ -250,12 +250,60 @@ export const TableEditor: React.FC = () => {
     jspInstance.current.refresh();
   };
 
+  // 選択列削除ハンドラ
+  const handleDeleteSelectedColumn = useCallback(() => {
+    if (!jspInstance.current) return;
+    const selection = jspInstance.current.getSelected?.();
+    if (!selection || selection.length === 0) {
+      alert("削除する列が選択されていません。");
+      return;
+    }
+    // [[[startRow, startCol], [endRow, endCol]]] の構造
+    const [startCell, endCell] = selection[0];
+    const startCol = startCell[1];
+    const endCol = endCell[1];
+    if (
+      typeof startCol !== "number" ||
+      typeof endCol !== "number" ||
+      startCol > endCol
+    ) {
+      alert("正しい列範囲が選択されていません。");
+      return;
+    }
+    // columns/dataを取得
+    const { columns, data } = parseMarkdownTable(markdown);
+    // 削除対象のカラムインデックス配列
+    const delColIdxs: number[] = [];
+    for (let col = startCol; col <= endCol; col++) {
+      delColIdxs.push(col);
+    }
+    // 新しいcolumns
+    const newColumns = columns.filter((_, idx) => !delColIdxs.includes(idx));
+    // 新しいdata
+    const newData = data.map(row => {
+      const newRow = { ...row };
+      delColIdxs.forEach(idx => {
+        if (columns[idx]) delete newRow[columns[idx].name];
+      });
+      return newRow;
+    });
+    // Markdown再生成
+    const newMarkdown = toMarkdownTable(newColumns, newData);
+    if (jspInstance.current) {
+      jspInstance.current.destroy();
+      jspInstance.current = null;
+    }
+    setMarkdown(newMarkdown);
+    setIsModified(true);
+  }, [setMarkdown, setIsModified, markdown]);
+
   return (
     <div>
       <div className={styles.tableEditor}>
         <TableEditorButtons
           onAddRow={handleAddRow}
           onAddColumn={handleAddColumn}
+          onDeleteSelectedColumn={handleDeleteSelectedColumn}
           onSave={handleSave}
           onSaveAndClose={handleSaveAndClose}
           isModified={isModified}
