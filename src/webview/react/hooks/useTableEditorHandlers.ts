@@ -8,6 +8,7 @@ interface UseTableEditorHandlersProps {
   setIsModified: (v: boolean) => void;
   markdown: string;
   jspInstance?: React.RefObject<any>;
+  pushToHistory?: (columns: Column[], data: RowData[]) => void;
 }
 
 export function useTableEditorHandlers({
@@ -17,17 +18,22 @@ export function useTableEditorHandlers({
   setIsModified,
   markdown,
   jspInstance,
+  pushToHistory,
 }: UseTableEditorHandlersProps) {
   // 行追加
   const handleAddRow = useCallback(() => {
+    // 現在の状態を履歴に追加
+    pushToHistory?.(columnDefs, rowData);
     // 新しい行データを生成し、markdownを更新
     const newData = [...rowData, {}];
     setMarkdown(toMarkdownTable(columnDefs, newData));
     setIsModified(true);
-  }, [rowData, columnDefs, setMarkdown, setIsModified]);
+  }, [rowData, columnDefs, setMarkdown, setIsModified, pushToHistory]);
 
   // 列追加
   const handleAddColumn = useCallback(() => {
+    // 現在の状態を履歴に追加
+    pushToHistory?.(columnDefs, rowData);
     const newColIdx = columnDefs.length + 1;
     const newColName = `col${newColIdx}`;
     const newColHeader = `Column${newColIdx}`;
@@ -41,7 +47,7 @@ export function useTableEditorHandlers({
         : [{ [newColName]: "" }];
     setMarkdown(toMarkdownTable(newColumns, newData));
     setIsModified(true);
-  }, [columnDefs, rowData, setMarkdown, setIsModified]);
+  }, [columnDefs, rowData, setMarkdown, setIsModified, pushToHistory]);
 
   // wrapText/autoHeightのon/off切替
   const handleToggleWrapAll = useCallback(() => {
@@ -80,6 +86,8 @@ export function useTableEditorHandlers({
       alert("正しい列範囲が選択されていません。");
       return;
     }
+    // 現在の状態を履歴に追加
+    pushToHistory?.(columnDefs, rowData);
     const { columns, data } = parseMarkdownTable(markdown);
     const delColIdxs: number[] = [];
     for (let col = startCol; col <= endCol; col++) {
@@ -96,7 +104,7 @@ export function useTableEditorHandlers({
     const newMarkdown = toMarkdownTable(newColumns, newData);
     setMarkdown(newMarkdown);
     setIsModified(true);
-  }, [setMarkdown, setIsModified, markdown, jspInstance]);
+  }, [setMarkdown, setIsModified, markdown, jspInstance, columnDefs, rowData, pushToHistory]);
 
   return {
     handleAddRow,

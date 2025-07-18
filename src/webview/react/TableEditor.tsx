@@ -21,6 +21,7 @@ import { toMarkdownTable, RowData } from "./utils/table";
 import { useTableEditorHandlers } from "./hooks/useTableEditorHandlers";
 import { useTableData } from "./hooks/useTableData";
 import { useTableSave } from "./hooks/useTableSave";
+import { useUndoRedo } from "./hooks/useUndoRedo";
 import styles from "./TableEditor.module.scss";
 
 export const TableEditor: React.FC = () => {
@@ -32,6 +33,13 @@ export const TableEditor: React.FC = () => {
 
   // markdownからcolumns/dataを生成
   const { columns, data } = useTableData(markdown);
+
+  // 初期データを計算
+  const initialData = useTableData(initialMarkdown);
+  
+  // Undo/Redo機能（配列データとして管理）
+  const { undo, redo, push: pushToHistory, reset: resetHistory, canUndo, canRedo } = useUndoRedo(initialData.columns, initialData.data);
+  
 
   // カラム定義
   const colDefs = columns.map(col => ({
@@ -54,6 +62,11 @@ export const TableEditor: React.FC = () => {
     setIsModified(false);
   }, [initialMarkdown]);
 
+  // 初期状態のみ履歴をリセット
+  useEffect(() => {
+    resetHistory(initialData.columns, initialData.data);
+  }, [initialData.columns, initialData.data, resetHistory]);
+
   const { save, saveAndClose } = useTableSave({
     columns,
     data,
@@ -66,23 +79,49 @@ export const TableEditor: React.FC = () => {
   // Save & Closeボタン処理
   const handleSaveAndClose = saveAndClose;
 
-  // Cmd+S/Ctrl+S ショートカット対応
+  // Undo/Redoハンドラ
+  const handleUndo = useCallback(() => {
+    if (!canUndo) return;
+    const previousState = undo();
+    const previousMarkdown = toMarkdownTable(previousState.columns, previousState.data);
+    setMarkdown(previousMarkdown);
+    setIsModified(true);
+  }, [undo, canUndo]);
+
+  const handleRedo = useCallback(() => {
+    if (!canRedo) return;
+    const nextState = redo();
+    const nextMarkdown = toMarkdownTable(nextState.columns, nextState.data);
+    setMarkdown(nextMarkdown);
+    setIsModified(true);
+  }, [redo, canRedo]);
+
+  // キーボードショートカット対応
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "s") {
         e.preventDefault();
+        e.stopPropagation();
         handleSave();
+      } else if ((e.metaKey || e.ctrlKey) && e.key === "z" && !e.shiftKey) {
+        e.preventDefault();
+        e.stopPropagation();
+        // jspreadsheetのundoを呼び出し
+        if (jspInstance?.current && jspInstance.current[0]) {
+          jspInstance.current[0].undo();
+        }
+      } else if ((e.metaKey || e.ctrlKey) && (e.key === "y" || (e.key === "z" && e.shiftKey))) {
+        e.preventDefault();
+        e.stopPropagation();
+        // jspreadsheetのredoを呼び出し
+        if (jspInstance?.current && jspInstance.current[0]) {
+          jspInstance.current[0].redo();
+        }
       }
     };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [handleSave]);
-
-  // Markdown初期化
-  useEffect(() => {
-    setMarkdown(initialMarkdown);
-    setIsModified(false);
-  }, [initialMarkdown]);
+    document.addEventListener("keydown", onKeyDown, true);
+    return () => document.removeEventListener("keydown", onKeyDown, true);
+  }, [handleSave, jspInstance]);
 
   // 行・列追加ハンドラ
   const {
@@ -98,6 +137,7 @@ export const TableEditor: React.FC = () => {
     setIsModified,
     markdown,
     jspInstance,
+    pushToHistory: pushToHistory,
   });
 
   return (
@@ -112,6 +152,11 @@ export const TableEditor: React.FC = () => {
           isModified={isModified}
           wrapAllChecked={wrapAllChecked}
           onToggleWrapAll={handleToggleWrapAll}
+          onUndo={handleUndo}
+          onRedo={handleRedo}
+          canUndo={canUndo}
+          canRedo={canRedo}
+          jspInstance={jspInstance}
         />
         <TableBody
           jspInstance={jspInstance}
@@ -120,6 +165,8 @@ export const TableEditor: React.FC = () => {
           columns={columns}
           data={data}
           setIsModified={setIsModified}
+          pushToHistory={pushToHistory}
+          setMarkdown={setMarkdown}
         />
       </div>
     </div>
