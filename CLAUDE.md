@@ -2,94 +2,94 @@
 
 ！！！必ず日本語で回答してください！！！
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+このファイルは、このリポジトリでコードを扱う際のClaude Code (claude.ai/code) へのガイダンスを提供します。
 
-## Commands
+## コマンド
 
-### Build and Development
-- `npm run build` - Full build: compiles TypeScript extension and builds React webview
-- `npm run compile` - TypeScript compilation only (extension code)
-- `npm run watch` - Watch mode for TypeScript compilation
-- `npm run build:webview` - Build React webview only (outputs to src/webview/main.js)
-- `npm run watch:webview` - Watch mode for React webview build
-- `npm run dev` - Concurrent watch mode for both extension and webview
+### ビルドと開発
+- `npm run build` - フルビルド：TypeScript拡張機能をコンパイルし、Reactウェブビューを構築
+- `npm run compile` - TypeScriptコンパイルのみ（拡張機能コード）
+- `npm run watch` - TypeScriptコンパイルのウォッチモード
+- `npm run build:webview` - Reactウェブビューのみをビルド（src/webview/main.jsに出力）
+- `npm run watch:webview` - Reactウェブビュービルドのウォッチモード
+- `npm run dev` - 拡張機能とウェブビューの同時ウォッチモード
 
-### Testing
-- `npm test` - Run Jest tests
-- `npm run pretest` - Compile TypeScript before running tests
-- Test files are located in `src/webview/react/hooks/__tests__/` and `src/webview/react/utils/__tests__/`
+### テスト
+- `npm test` - Jestテストを実行
+- `npm run pretest` - テスト実行前にTypeScriptをコンパイル
+- テストファイルは `src/webview/react/hooks/__tests__/` および `src/webview/react/utils/__tests__/` に配置
 
-### VSCode Extension Development
-- Use "Run Extension" or "拡張機能のデバッグ" in VSCode to test the extension
-- Extension activates on markdown files or when commands are executed
-- Main extension entry point: `src/extension.ts`
+### VSCode拡張機能開発
+- VSCodeで「拡張機能の実行」または「拡張機能のデバッグ」を使用して拡張機能をテスト
+- 拡張機能はMarkdownファイルまたはコマンド実行時にアクティブ化
+- メイン拡張機能エントリーポイント: `src/extension.ts`
 
-## Architecture
+## アーキテクチャ
 
-### VSCode Extension Structure
-This is a VSCode extension for editing Markdown tables with an Excel-like React UI. The extension consists of:
+### VSCode拡張機能構造
+これは、ExcelライクなReact UIでMarkdownテーブルを編集するVSCode拡張機能です。拡張機能は以下で構成されています：
 
-1. **Extension Host (src/extension.ts)**
-   - Registers commands: `markdown-table-editor.addTable` and `markdown-table-editor.editTable`
-   - Manages webview lifecycle and communication
-   - Implements CodeLens provider for in-editor "Edit Table" buttons
-   - Handles markdown table detection using `marked` library
+1. **拡張機能ホスト (src/extension.ts)**
+   - コマンド登録: `markdown-table-editor.addTable` および `markdown-table-editor.editTable`
+   - ウェブビューのライフサイクルと通信を管理
+   - エディター内「Edit Table」ボタンのためのCodeLensプロバイダーを実装
+   - `marked`ライブラリを使用してMarkdownテーブル検出を処理
 
-2. **React Webview (src/webview/react/)**
-   - Built with React 18 and jspreadsheet-ce for table editing
-   - Entry point: `src/webview/react/index.tsx`
-   - Main component: `TableEditor.tsx`
-   - Built using esbuild with SCSS modules support
+2. **Reactウェブビュー (src/webview/react/)**
+   - React 18とjspreadsheet-ceでテーブル編集を構築
+   - エントリーポイント: `src/webview/react/index.tsx`
+   - メインコンポーネント: `TableEditor.tsx`
+   - SCSSモジュールサポートのesbuildで構築
 
-### Key Components
+### 主要コンポーネント
 
 #### TableEditor (src/webview/react/TableEditor.tsx)
-- Main React component that orchestrates table editing
-- Manages state: markdown text, modification status, undo/redo
-- Handles VSCode webview communication
-- Integrates multiple custom hooks for functionality
+- テーブル編集を統括するメインReactコンポーネント
+- 状態管理：Markdownテキスト、変更ステータス、undo/redo
+- VSCodeウェブビュー通信を処理
+- 機能性のための複数のカスタムフックを統合
 
-#### Custom Hooks
-- `useTableData`: Parses markdown to columns/data, provides default 3x3 table
-- `useTableEditorHandlers`: Handles row/column addition, deletion, wrapping
-- `useTableSave`: Manages save operations and VSCode communication
-- `useSimpleUndoRedo`: Implements undo/redo functionality with history stack
+#### カスタムフック
+- `useTableData`: Markdownをカラム/データに解析、デフォルト3x3テーブルを提供
+- `useTableEditorHandlers`: 行/列の追加、削除、ラッピングを処理
+- `useTableSave`: 保存操作とVSCode通信を管理
+- `useSimpleUndoRedo`: 履歴スタックによるundo/redo機能を実装
 
-#### Utility Functions (src/webview/react/utils/table.ts)
-- `parseMarkdownTable`: Converts markdown string to column/data structures
-- `toMarkdownTable`: Converts column/data back to markdown string
-- `parseMarkdownTable2D`/`generateMarkdownTable2D`: Lower-level 2D array utilities
+#### ユーティリティ関数 (src/webview/react/utils/table.ts)
+- `parseMarkdownTable`: Markdown文字列をカラム/データ構造に変換
+- `toMarkdownTable`: カラム/データをMarkdown文字列に変換
+- `parseMarkdownTable2D`/`generateMarkdownTable2D`: 低レベル2次元配列ユーティリティ
 
-### Build System
-- **Extension**: TypeScript compiled to `out/` directory
-- **Webview**: React app built with esbuild to `src/webview/main.js`
-- **Styling**: SCSS modules with CSS modules support
-- **Testing**: Jest with ts-jest, jsdom environment
+### ビルドシステム
+- **拡張機能**: TypeScriptを`out/`ディレクトリにコンパイル
+- **ウェブビュー**: esbuildで`src/webview/main.js`にReactアプリを構築
+- **スタイリング**: CSSモジュールサポート付きSCSSモジュール
+- **テスト**: ts-jest、jsdom環境でのJest
 
-### Communication Flow
-1. Extension detects markdown tables and shows CodeLens "Edit Table" buttons
-2. Commands open webview with initial markdown data via `window.__INIT_MARKDOWN__`
-3. Webview sends messages back to extension for save operations
-4. Extension applies edits to the original markdown document
+### 通信フロー
+1. 拡張機能がMarkdownテーブルを検出し、CodeLens「Edit Table」ボタンを表示
+2. コマンドが`window.__INIT_MARKDOWN__`経由で初期Markdownデータとウェブビューを開く
+3. ウェブビューが保存操作のためのメッセージを拡張機能に送信
+4. 拡張機能が元のMarkdownドキュメントに編集を適用
 
-### Key Files to Understand
-- `src/extension.ts` - Extension activation, commands, webview management
-- `src/webview/react/TableEditor.tsx` - Main React component
-- `src/webview/react/utils/table.ts` - Markdown parsing/generation logic
-- `esbuild.webview.mjs` - React build configuration
-- `jest.config.js` - Test configuration
+### 理解すべき主要ファイル
+- `src/extension.ts` - 拡張機能アクティベーション、コマンド、ウェブビュー管理
+- `src/webview/react/TableEditor.tsx` - メインReactコンポーネント
+- `src/webview/react/utils/table.ts` - Markdown解析/生成ロジック
+- `esbuild.webview.mjs` - Reactビルド設定
+- `jest.config.js` - テスト設定
 
-## Styling and Theme Integration
+## スタイリングとテーマ統合
 
-### VSCode Theme Support
-- Uses CSS custom properties for VSCode theme integration
-- SCSS variables defined for consistent theming
-- Supports both light and dark themes automatically
+### VSCodeテーマサポート
+- VSCodeテーマ統合のためのCSSカスタムプロパティを使用
+- 一貫したテーマ設定のためのSCSS変数定義
+- ライトテーマとダークテーマの両方を自動サポート
 
-### jspreadsheet-ce Styling
-- Custom CSS overrides in `TableEditor.module.scss`
-- Proper styling for editing mode (textarea/input fields)
-- VSCode-consistent selection and focus states
+### jspreadsheet-ceスタイリング
+- `TableEditor.module.scss`でのカスタムCSSオーバーライド
+- 編集モード（textarea/inputフィールド）の適切なスタイリング
+- VSCode一貫の選択とフォーカス状態
 
 ## Testing Strategy
 
@@ -106,8 +106,8 @@ This is a VSCode extension for editing Markdown tables with an Excel-like React 
 - ✅ カスタムフック（src/webview/react/hooks/__tests__/）
 
 **追加すべきもの:**
-- [ ] useSimpleUndoRedo.test.ts - Undo/Redo状態管理
-- [ ] より詳細なエッジケーステスト
+- [x] useSimpleUndoRedo.test.ts - Undo/Redo状態管理
+- [x] より詳細なエッジケーステスト
 
 #### 2. コンポーネント統合テスト（Component Integration Tests）
 **新規作成が必要:**
@@ -197,33 +197,33 @@ describe('TableEditorButtons', () => {
 });
 ```
 
-## Development Notes
+## 開発ノート
 
-### Current Implementation Status
-- ✅ Basic table editing with jspreadsheet-ce
-- ✅ Markdown parsing and generation
-- ✅ VSCode theme integration
-- ✅ Undo/Redo functionality (simplified)
-- ✅ Save operations
-- ⚠️ Button functionality simplified (only Undo/Redo active)
+### 現在の実装状況
+- ✅ jspreadsheet-ceによる基本的なテーブル編集
+- ✅ Markdown解析と生成
+- ✅ VSCodeテーマ統合
+- ✅ Undo/Redo機能（簡易版）
+- ✅ 保存操作
+- ⚠️ ボタン機能の簡素化（Undo/Redoのみアクティブ）
 
-### Known Issues and TODOs
-- Consider full undo/redo implementation beyond jspreadsheet's built-in
-- Improve error handling for malformed markdown
-- Add more comprehensive keyboard shortcuts
-- Enhance accessibility features
+### 既知の問題とTODO
+- jspreadsheetの組み込み機能を超えた完全なundo/redo実装の検討
+- 不正なMarkdownのエラー処理改善
+- より包括的なキーボードショートカットの追加
+- アクセシビリティ機能の強化
 
-### Code Style Guidelines
-- Use TypeScript strict mode
-- Prefer functional components with hooks
-- Use SCSS modules for styling
-- Follow VSCode extension best practices
-- Write tests for new functionality
+### コードスタイルガイドライン
+- TypeScript strict モードを使用
+- フックを使った関数コンポーネントを優先
+- スタイリングにはSCSSモジュールを使用
+- VSCode拡張機能のベストプラクティスに従う
+- 新機能にはテストを記述
 
-## Important Notes for Claude
+## Claudeへの重要な注意事項
 
-1. **Language**: Always respond in Japanese as specified
-2. **Code Quality**: Maintain existing patterns and conventions
-3. **Testing**: Consider test implications when making changes
-4. **VSCode Integration**: Ensure changes work with VSCode theming and APIs
-5. **Performance**: Be mindful of webview performance with large tables
+1. **言語**: 指定通り常に日本語で回答
+2. **コード品質**: 既存のパターンと規約を維持
+3. **テスト**: 変更時にはテストへの影響を考慮
+4. **VSCode統合**: 変更がVSCodeテーマとAPIで動作することを確認
+5. **パフォーマンス**: 大きなテーブルでのウェブビューパフォーマンスに注意
