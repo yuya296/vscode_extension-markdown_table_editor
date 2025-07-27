@@ -88,6 +88,60 @@ body, .tableEditor {
   background: var(--vscode-tab-inactiveBackground, #2d2d30) !important;
   color: var(--vscode-editor-foreground, #ffffff) !important;
 }
+
+/* jspreadsheet編集用テキストエリア */
+.jss_textarea {
+  background: var(--vscode-editor-background, #1e1e1e) !important;
+  color: var(--vscode-editor-foreground, #ffffff) !important;
+  border: 1px solid var(--vscode-focusBorder, #007fd4) !important;
+  font-family: inherit !important;
+  font-size: inherit !important;
+}
+
+/* 編集中の入力フィールド */
+.jss_worksheet input,
+.jss_worksheet input[type="text"],
+.jss_content input,
+.jss_content input[type="text"],
+input.jss_input,
+.jss_spreadsheet input,
+.jss_container input {
+  background: var(--vscode-editor-background, #1e1e1e) !important;
+  color: var(--vscode-editor-foreground, #ffffff) !important;
+  border: none !important;
+  outline: none !important;
+  font-family: inherit !important;
+  font-size: inherit !important;
+  -webkit-text-fill-color: var(--vscode-editor-foreground, #ffffff) !important;
+}
+
+/* より具体的なセレクター */
+.jss_spreadsheet .jss_container .jss_content input {
+  background: var(--vscode-editor-background, #1e1e1e) !important;
+  color: var(--vscode-editor-foreground, #ffffff) !important;
+  -webkit-text-fill-color: var(--vscode-editor-foreground, #ffffff) !important;
+}
+
+/* 編集時のtextarea要素（インラインスタイルを上書き） */
+.jss_worksheet td textarea,
+.jss_worksheet textarea,
+td.editor textarea,
+td textarea {
+  background: var(--vscode-editor-background, #1e1e1e) !important;
+  color: var(--vscode-editor-foreground, #ffffff) !important;
+  border: 1px solid var(--vscode-focusBorder, #007fd4) !important;
+  font-family: inherit !important;
+  font-size: inherit !important;
+  resize: none !important;
+  -webkit-text-fill-color: var(--vscode-editor-foreground, #ffffff) !important;
+  box-sizing: border-box !important;
+  padding: 4px 6px !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+  height: auto !important;
+  min-height: 100% !important;
+  max-height: 100% !important;
+}
 .tableEditor {
   margin: 0;
   max-width: 100%;
