@@ -2,20 +2,6 @@ import React from "react";
 import { MdUndo, MdRedo } from "react-icons/md";
 
 interface TableEditorButtonsProps {
-  // Table operations
-  onAddRow: () => void;
-  onAddColumn: () => void;
-  onDeleteSelectedColumn: () => void;
-  
-  // Save operations
-  onSave: () => void;
-  onSaveAndClose: () => void;
-  isModified: boolean;
-  
-  // Display options
-  onToggleWrapAll: () => void;
-  wrapAllChecked: boolean;
-  
   // Undo/Redo
   canUndo: boolean;
   canRedo: boolean;
@@ -27,14 +13,6 @@ interface TableEditorButtonsProps {
 }
 
 const TableEditorButtons: React.FC<TableEditorButtonsProps> = ({
-  onAddRow,
-  onAddColumn,
-  onDeleteSelectedColumn,
-  onSave,
-  onSaveAndClose,
-  isModified,
-  onToggleWrapAll,
-  wrapAllChecked,
   jspInstance,
   canUndo,
   canRedo,
@@ -90,20 +68,6 @@ const TableEditorButtons: React.FC<TableEditorButtonsProps> = ({
       >
         {React.createElement(MdRedo as any, { size: 16 })}
       </button>
-      <button onClick={onAddRow}>行を追加</button>
-      <button onClick={onAddColumn}>列を追加</button>
-      <button onClick={onDeleteSelectedColumn}>選択列を削除</button>
-      <button onClick={onSave} disabled={!isModified}>Save</button>
-      <button onClick={onSaveAndClose} disabled={!isModified}>Save & Close</button>
-      <label style={{ userSelect: "none", marginLeft: 8 }}>
-        <input
-          type="checkbox"
-          checked={wrapAllChecked}
-          onChange={onToggleWrapAll}
-          style={{ marginRight: 4 }}
-        />
-        全列 wrap
-      </label>
     </div>
   );
 };

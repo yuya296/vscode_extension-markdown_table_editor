@@ -13,7 +13,6 @@ interface TableBodyProps {
   data: RowData[];
   
   // State setters
-  setIsModified: (modified: boolean) => void;
   setMarkdown?: (markdown: string) => void;
   
   // Event callbacks
@@ -27,7 +26,6 @@ const TableBody: React.FC<TableBodyProps> = ({
   colDefs,
   columns,
   data,
-  setIsModified,
   onChange,
   setMarkdown,
   onHistoryChange,
@@ -55,8 +53,6 @@ const TableBody: React.FC<TableBodyProps> = ({
           onHistoryChange && onHistoryChange();
         }}
         onchange={(_instance: any) => {
-          setIsModified(true);
-
           // セル編集後にMarkdownを更新
           if (setMarkdown && jspInstance.current && jspInstance.current[0]) {
             const currentData = jspInstance.current[0].getData();

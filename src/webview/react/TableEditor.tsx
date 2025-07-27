@@ -28,7 +28,6 @@ export const TableEditor: React.FC = () => {
 
   const initialMarkdown = window.__INIT_MARKDOWN__ || "";
   const [markdown, setMarkdown] = useState<string>(initialMarkdown);
-  const [isModified, setIsModified] = useState(false);
 
 
   // markdownからcolumns/dataを生成
@@ -52,16 +51,7 @@ export const TableEditor: React.FC = () => {
   // Markdown初期化
   useEffect(() => {
     setMarkdown(initialMarkdown);
-    setIsModified(false);
   }, [initialMarkdown]);
-
-  // 保存機能
-  const { save: handleSave, saveAndClose: handleSaveAndClose } = useTableSave({
-    columns,
-    data,
-    setIsModified,
-    jspInstance,
-  });
 
   // Undo/Redo状態管理
   const { canUndo, canRedo, onUndo, onRedo } = useSimpleUndoRedo();
@@ -75,11 +65,7 @@ export const TableEditor: React.FC = () => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const isCmd = e.metaKey || e.ctrlKey;
       
-      if (isCmd && e.key === "s") {
-        e.preventDefault();
-        e.stopPropagation();
-        handleSave();
-      } else if (isCmd && e.key === "z" && !e.shiftKey) {
+      if (isCmd && e.key === "z" && !e.shiftKey) {
         e.preventDefault();
         e.stopPropagation();
         if (jspInstance?.current?.[0]) {
@@ -100,36 +86,13 @@ export const TableEditor: React.FC = () => {
     
     document.addEventListener("keydown", handleKeyDown, true);
     return () => document.removeEventListener("keydown", handleKeyDown, true);
-  }, [handleSave, jspInstance, onUndo, onRedo, handleHistoryChange]);
+  }, [jspInstance, onUndo, onRedo, handleHistoryChange]);
 
-  // テーブル操作ハンドラー
-  const {
-    handleAddRow,
-    handleAddColumn,
-    handleDeleteSelectedColumn,
-    handleToggleWrapAll,
-    wrapAllChecked,
-  } = useTableEditorHandlers({
-    columnDefs: columns,
-    rowData: data,
-    setMarkdown,
-    setIsModified,
-    markdown,
-    jspInstance,
-  });
 
   return (
     <div>
       <div className={styles.tableEditor}>
         <TableEditorButtons
-          onAddRow={handleAddRow}
-          onAddColumn={handleAddColumn}
-          onDeleteSelectedColumn={handleDeleteSelectedColumn}
-          onSave={handleSave}
-          onSaveAndClose={handleSaveAndClose}
-          isModified={isModified}
-          wrapAllChecked={wrapAllChecked}
-          onToggleWrapAll={handleToggleWrapAll}
           jspInstance={jspInstance}
           canUndo={canUndo}
           canRedo={canRedo}
@@ -142,7 +105,6 @@ export const TableEditor: React.FC = () => {
           colDefs={colDefs}
           columns={columns}
           data={data}
-          setIsModified={setIsModified}
           setMarkdown={setMarkdown}
           onHistoryChange={handleHistoryChange}
         />
