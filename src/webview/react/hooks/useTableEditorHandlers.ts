@@ -4,8 +4,8 @@ import parseMarkdownTable, { toMarkdownTable, Column, RowData } from "../utils/t
 interface UseTableEditorHandlersProps {
   columnDefs: Column[];
   rowData: RowData[];
-  setMarkdown: (md: string) => void;
-  setIsModified: (v: boolean) => void;
+  setMarkdown: (markdown: string) => void;
+  setIsModified: (modified: boolean) => void;
   markdown: string;
   jspInstance?: React.RefObject<any>;
 }
@@ -96,7 +96,7 @@ export function useTableEditorHandlers({
     const newMarkdown = toMarkdownTable(newColumns, newData);
     setMarkdown(newMarkdown);
     setIsModified(true);
-  }, [setMarkdown, setIsModified, markdown, jspInstance]);
+  }, [setMarkdown, setIsModified, markdown, jspInstance, columnDefs, rowData]);
 
   return {
     handleAddRow,

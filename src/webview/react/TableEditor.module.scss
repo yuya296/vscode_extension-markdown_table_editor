@@ -1,60 +1,230 @@
-/* VSCodeテーマに追従する背景色 */
-body, .tableEditor, .tui-grid-root, .tui-grid-container {
-  background: var(--vscode-editor-background, #1e1e1e) !important;
+// VSCode テーマ色変数
+$vscode-bg: var(--vscode-editor-background, #1e1e1e);
+$vscode-fg: var(--vscode-editor-foreground, #ffffff);
+$vscode-border: var(--vscode-textSeparator-foreground, rgba(255, 255, 255, 0.3));
+$vscode-focus: var(--vscode-focusBorder, #007fd4);
+$vscode-tab-bg: var(--vscode-tab-inactiveBackground, #2d2d30);
+$vscode-hover-bg: var(--vscode-list-hoverBackground, #2a2d2e);
+$vscode-selection-highlight: rgba(0, 127, 212, 0.2);
+$vscode-selection-active: rgba(0, 127, 212, 0.3);
+
+// ベーススタイル
+body, .tableEditor {
+  background: $vscode-bg !important;
+  color: $vscode-fg !important;
 }
-/* TOAST UI Grid 枠・背景を消すカスタムCSS */
-.tui-grid-root,
-.tui-grid-container {
+
+// jspreadsheet-ce スプレッドシート
+.jss_spreadsheet {
+  .jss_container,
+  .jss_content {
+    background: $vscode-bg !important;
+    color: $vscode-fg !important;
+  }
+
+  // ワークシート
+  .jss_worksheet {
+    background: $vscode-bg !important;
+    color: $vscode-fg !important;
+    border: 1px solid $vscode-border !important;
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+
+    // セル
+    td {
+      background: $vscode-bg !important;
+      color: $vscode-fg !important;
+      border-right: 1px solid $vscode-border !important;
+      border-bottom: 1px solid $vscode-border !important;
+      border-top: none !important;
+      border-left: none !important;
+
+      // 最初の列（行番号）
+      &:first-child {
+        border-left: 1px solid $vscode-border !important;
+      }
+
+      // ホバー状態
+      &:hover {
+        background: $vscode-hover-bg !important;
+      }
+
+      // フォーカス状態
+      &:focus {
+        background: var(--vscode-list-focusBackground, #094771) !important;
+        outline: 1px solid $vscode-focus !important;
+      }
+
+      // 選択状態
+      &.highlight,
+      &.selected {
+        background: $vscode-selection-highlight !important;
+        color: $vscode-fg !important;
+        border: 1px solid $vscode-border !important;
+        box-shadow: 0 0 0 1px $vscode-focus !important;
+        position: relative !important;
+        z-index: 10 !important;
+      }
+
+      // 編集中
+      &.edition {
+        background: $vscode-selection-active !important;
+        border: 1px solid $vscode-border !important;
+        box-shadow: 0 0 0 2px $vscode-focus !important;
+        position: relative !important;
+        z-index: 20 !important;
+      }
+
+      // 選択範囲の境界線
+      &.highlight::before {
+        content: '';
+        position: absolute;
+        top: -1px;
+        left: -1px;
+        right: -1px;
+        bottom: -1px;
+        border: 2px solid $vscode-focus;
+        pointer-events: none;
+        z-index: 1;
+      }
+    }
+
+    // ヘッダー
+    thead td {
+      background: $vscode-tab-bg !important;
+      color: $vscode-fg !important;
+      font-weight: 600;
+      border-top: 1px solid $vscode-border !important;
+    }
+  }
+
+  // 行番号
+  .jss_row {
+    background: $vscode-tab-bg !important;
+    color: $vscode-fg !important;
+  }
+
+  // 編集用テキストエリア
+  .jss_textarea {
+    background: $vscode-bg !important;
+    color: $vscode-fg !important;
+    border: 1px solid $vscode-focus !important;
+    font-family: inherit !important;
+    font-size: inherit !important;
+  }
+
+  // 編集用入力フィールド
+  input,
+  input[type="text"] {
+    background: $vscode-bg !important;
+    color: $vscode-fg !important;
+    border: none !important;
+    outline: none !important;
+    font-family: inherit !important;
+    font-size: inherit !important;
+    -webkit-text-fill-color: $vscode-fg !important;
+  }
+}
+
+// より具体的な入力フィールドセレクター
+.jss_content input,
+.jss_content input[type="text"],
+input.jss_input,
+.jss_container input {
+  background: $vscode-bg !important;
+  color: $vscode-fg !important;
   border: none !important;
-  box-shadow: none !important;
-  background: transparent !important;
+  outline: none !important;
+  font-family: inherit !important;
+  font-size: inherit !important;
+  -webkit-text-fill-color: $vscode-fg !important;
 }
+
+// 編集時のtextarea（インラインスタイル上書き）
+.jss_worksheet td textarea,
+.jss_worksheet textarea,
+td.editor textarea,
+td textarea {
+  background: $vscode-bg !important;
+  color: $vscode-fg !important;
+  border: 1px solid $vscode-focus !important;
+  font-family: inherit !important;
+  font-size: inherit !important;
+  resize: none !important;
+  -webkit-text-fill-color: $vscode-fg !important;
+  box-sizing: border-box !important;
+  padding: 4px 6px !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+  height: auto !important;
+  min-height: 100% !important;
+  max-height: 100% !important;
+}
+// テーブルエディター本体
 .tableEditor {
   margin: 0;
   max-width: 100%;
+
+  // 古いテーブルスタイル（未使用の可能性）
+  &Table {
+    border-collapse: collapse;
+    width: 100%;
+  }
+
+  th,
+  td {
+    border: 1px solid #aaa;
+    padding: 6px 12px;
+    min-width: 60px;
+    text-align: left;
+  }
+
+  th {
+    background: $vscode-bg !important;
+  }
 }
 
-.tableEditorTable {
-  border-collapse: collapse;
-  width: 100%;
-}
-
-.tableEditor th,
-.tableEditor td {
-  border: 1px solid #aaa;
-  padding: 6px 12px;
-  min-width: 60px;
-  text-align: left;
-}
-
-.tableEditor th {
-  background: var(--vscode-editor-background, #f5f5f5) !important;
-}
-
+// ボタンエリア
 .tableEditorButtons {
   margin: 8px 0;
   display: flex;
   gap: 8px;
+
+  button {
+    padding: 6px 8px;
+    border-radius: 4px;
+    border: none;
+    background: transparent;
+    color: $vscode-fg;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    &:hover {
+      background: var(--vscode-toolbar-hoverBackground, rgba(255, 255, 255, 0.1));
+    }
+
+    &:disabled {
+      color: var(--vscode-disabledForeground, rgba(255, 255, 255, 0.4));
+      cursor: not-allowed;
+
+      &:hover {
+        background: transparent;
+      }
+    }
+  }
 }
 
-.tableEditorButtons button {
-  padding: 4px 12px;
-  border-radius: 4px;
-  border: 1px solid var(--vscode-button-border, #bbb);
-  background: var(--vscode-button-background, #fff);
-  color: var(--vscode-button-foreground, #000);
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.tableEditorButtons button:hover {
-  background: var(--vscode-button-hoverBackground, #e6f0ff);
-}
+// テキスト折り返し（レガシー）
 .wrap-text-cell {
   white-space: pre-wrap !important;
   word-break: break-word;
   line-height: 1.4;
 }
+
+// AG Grid用（未使用の可能性）
 .ag-theme-alpine .wrap-text-cell {
   white-space: pre-wrap !important;
   overflow-wrap: break-word !important;
@@ -64,10 +234,7 @@ body, .tableEditor, .tui-grid-root, .tui-grid-container {
   overflow: visible !important;
 }
 
-.jexcel_content {
-  white-space: pre-wrap;
-}
-
+// jexcel（古いライブラリ、未使用の可能性）
 .jexcel_content {
   white-space: pre-wrap;
 }
