@@ -17,11 +17,10 @@ import React, { useRef, useEffect, useState, useCallback } from "react";
 import "jspreadsheet-ce/dist/jspreadsheet.css";
 import TableEditorButtons from "./TableEditorButtons";
 import TableBody from "./TableBody";
-import { toMarkdownTable, RowData } from "./utils/table";
 import { useTableEditorHandlers } from "./hooks/useTableEditorHandlers";
 import { useTableData } from "./hooks/useTableData";
 import { useTableSave } from "./hooks/useTableSave";
-import { useUndoRedo } from "./hooks/useUndoRedo";
+import { useSimpleUndoRedo } from "./hooks/useSimpleUndoRedo";
 import styles from "./TableEditor.module.scss";
 
 export const TableEditor: React.FC = () => {
@@ -31,15 +30,9 @@ export const TableEditor: React.FC = () => {
   const [markdown, setMarkdown] = useState<string>(initialMarkdown);
   const [isModified, setIsModified] = useState(false);
 
+
   // markdownからcolumns/dataを生成
   const { columns, data } = useTableData(markdown);
-
-  // 初期データを計算
-  const initialData = useTableData(initialMarkdown);
-  
-  // Undo/Redo機能（配列データとして管理）
-  const { undo, redo, push: pushToHistory, reset: resetHistory, canUndo, canRedo } = useUndoRedo(initialData.columns, initialData.data);
-  
 
   // カラム定義
   const colDefs = columns.map(col => ({
@@ -62,68 +55,54 @@ export const TableEditor: React.FC = () => {
     setIsModified(false);
   }, [initialMarkdown]);
 
-  // 初期状態のみ履歴をリセット
-  useEffect(() => {
-    resetHistory(initialData.columns, initialData.data);
-  }, [initialData.columns, initialData.data, resetHistory]);
-
-  const { save, saveAndClose } = useTableSave({
+  // 保存機能
+  const { save: handleSave, saveAndClose: handleSaveAndClose } = useTableSave({
     columns,
     data,
     setIsModified,
     jspInstance,
   });
 
-  // 保存処理
-  const handleSave = save;
-  // Save & Closeボタン処理
-  const handleSaveAndClose = saveAndClose;
+  // Undo/Redo状態管理
+  const { canUndo, canRedo, onUndo, onRedo } = useSimpleUndoRedo();
+  
+  // 履歴状態の更新用（互換性のため保持）
+  const [historyUpdateTrigger, setHistoryUpdateTrigger] = useState(0);
+  const handleHistoryChange = () => setHistoryUpdateTrigger(prev => prev + 1);
 
-  // Undo/Redoハンドラ
-  const handleUndo = useCallback(() => {
-    if (!canUndo) return;
-    const previousState = undo();
-    const previousMarkdown = toMarkdownTable(previousState.columns, previousState.data);
-    setMarkdown(previousMarkdown);
-    setIsModified(true);
-  }, [undo, canUndo]);
-
-  const handleRedo = useCallback(() => {
-    if (!canRedo) return;
-    const nextState = redo();
-    const nextMarkdown = toMarkdownTable(nextState.columns, nextState.data);
-    setMarkdown(nextMarkdown);
-    setIsModified(true);
-  }, [redo, canRedo]);
-
-  // キーボードショートカット対応
+  // キーボードショートカット
   useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "s") {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const isCmd = e.metaKey || e.ctrlKey;
+      
+      if (isCmd && e.key === "s") {
         e.preventDefault();
         e.stopPropagation();
         handleSave();
-      } else if ((e.metaKey || e.ctrlKey) && e.key === "z" && !e.shiftKey) {
+      } else if (isCmd && e.key === "z" && !e.shiftKey) {
         e.preventDefault();
         e.stopPropagation();
-        // jspreadsheetのundoを呼び出し
-        if (jspInstance?.current && jspInstance.current[0]) {
+        if (jspInstance?.current?.[0]) {
           jspInstance.current[0].undo();
+          onUndo();
+          handleHistoryChange();
         }
-      } else if ((e.metaKey || e.ctrlKey) && (e.key === "y" || (e.key === "z" && e.shiftKey))) {
+      } else if (isCmd && (e.key === "y" || (e.key === "z" && e.shiftKey))) {
         e.preventDefault();
         e.stopPropagation();
-        // jspreadsheetのredoを呼び出し
-        if (jspInstance?.current && jspInstance.current[0]) {
+        if (jspInstance?.current?.[0]) {
           jspInstance.current[0].redo();
+          onRedo();
+          handleHistoryChange();
         }
       }
     };
-    document.addEventListener("keydown", onKeyDown, true);
-    return () => document.removeEventListener("keydown", onKeyDown, true);
-  }, [handleSave, jspInstance]);
+    
+    document.addEventListener("keydown", handleKeyDown, true);
+    return () => document.removeEventListener("keydown", handleKeyDown, true);
+  }, [handleSave, jspInstance, onUndo, onRedo, handleHistoryChange]);
 
-  // 行・列追加ハンドラ
+  // テーブル操作ハンドラー
   const {
     handleAddRow,
     handleAddColumn,
@@ -137,7 +116,6 @@ export const TableEditor: React.FC = () => {
     setIsModified,
     markdown,
     jspInstance,
-    pushToHistory: pushToHistory,
   });
 
   return (
@@ -152,11 +130,11 @@ export const TableEditor: React.FC = () => {
           isModified={isModified}
           wrapAllChecked={wrapAllChecked}
           onToggleWrapAll={handleToggleWrapAll}
-          onUndo={handleUndo}
-          onRedo={handleRedo}
+          jspInstance={jspInstance}
           canUndo={canUndo}
           canRedo={canRedo}
-          jspInstance={jspInstance}
+          onUndo={onUndo}
+          onRedo={onRedo}
         />
         <TableBody
           jspInstance={jspInstance}
@@ -165,8 +143,8 @@ export const TableEditor: React.FC = () => {
           columns={columns}
           data={data}
           setIsModified={setIsModified}
-          pushToHistory={pushToHistory}
           setMarkdown={setMarkdown}
+          onHistoryChange={handleHistoryChange}
         />
       </div>
     </div>

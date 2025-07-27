@@ -4,11 +4,10 @@ import parseMarkdownTable, { toMarkdownTable, Column, RowData } from "../utils/t
 interface UseTableEditorHandlersProps {
   columnDefs: Column[];
   rowData: RowData[];
-  setMarkdown: (md: string) => void;
-  setIsModified: (v: boolean) => void;
+  setMarkdown: (markdown: string) => void;
+  setIsModified: (modified: boolean) => void;
   markdown: string;
   jspInstance?: React.RefObject<any>;
-  pushToHistory?: (columns: Column[], data: RowData[]) => void;
 }
 
 export function useTableEditorHandlers({
@@ -18,22 +17,17 @@ export function useTableEditorHandlers({
   setIsModified,
   markdown,
   jspInstance,
-  pushToHistory,
 }: UseTableEditorHandlersProps) {
   // 行追加
   const handleAddRow = useCallback(() => {
-    // 現在の状態を履歴に追加
-    pushToHistory?.(columnDefs, rowData);
     // 新しい行データを生成し、markdownを更新
     const newData = [...rowData, {}];
     setMarkdown(toMarkdownTable(columnDefs, newData));
     setIsModified(true);
-  }, [rowData, columnDefs, setMarkdown, setIsModified, pushToHistory]);
+  }, [rowData, columnDefs, setMarkdown, setIsModified]);
 
   // 列追加
   const handleAddColumn = useCallback(() => {
-    // 現在の状態を履歴に追加
-    pushToHistory?.(columnDefs, rowData);
     const newColIdx = columnDefs.length + 1;
     const newColName = `col${newColIdx}`;
     const newColHeader = `Column${newColIdx}`;
@@ -47,7 +41,7 @@ export function useTableEditorHandlers({
         : [{ [newColName]: "" }];
     setMarkdown(toMarkdownTable(newColumns, newData));
     setIsModified(true);
-  }, [columnDefs, rowData, setMarkdown, setIsModified, pushToHistory]);
+  }, [columnDefs, rowData, setMarkdown, setIsModified]);
 
   // wrapText/autoHeightのon/off切替
   const handleToggleWrapAll = useCallback(() => {
@@ -86,8 +80,6 @@ export function useTableEditorHandlers({
       alert("正しい列範囲が選択されていません。");
       return;
     }
-    // 現在の状態を履歴に追加
-    pushToHistory?.(columnDefs, rowData);
     const { columns, data } = parseMarkdownTable(markdown);
     const delColIdxs: number[] = [];
     for (let col = startCol; col <= endCol; col++) {
@@ -104,7 +96,7 @@ export function useTableEditorHandlers({
     const newMarkdown = toMarkdownTable(newColumns, newData);
     setMarkdown(newMarkdown);
     setIsModified(true);
-  }, [setMarkdown, setIsModified, markdown, jspInstance, columnDefs, rowData, pushToHistory]);
+  }, [setMarkdown, setIsModified, markdown, jspInstance, columnDefs, rowData]);
 
   return {
     handleAddRow,

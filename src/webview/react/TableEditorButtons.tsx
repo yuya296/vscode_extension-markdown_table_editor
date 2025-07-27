@@ -1,23 +1,31 @@
 import React from "react";
 
-
-type Props = {
+interface TableEditorButtonsProps {
+  // Table operations
   onAddRow: () => void;
   onAddColumn: () => void;
   onDeleteSelectedColumn: () => void;
+  
+  // Save operations
   onSave: () => void;
   onSaveAndClose: () => void;
   isModified: boolean;
+  
+  // Display options
   onToggleWrapAll: () => void;
   wrapAllChecked: boolean;
-  onUndo: () => void;
-  onRedo: () => void;
+  
+  // Undo/Redo
   canUndo: boolean;
   canRedo: boolean;
+  onUndo: () => void;
+  onRedo: () => void;
+  
+  // jspreadsheet instance
   jspInstance?: React.RefObject<any>;
-};
+}
 
-const TableEditorButtons: React.FC<Props> = ({
+const TableEditorButtons: React.FC<TableEditorButtonsProps> = ({
   onAddRow,
   onAddColumn,
   onDeleteSelectedColumn,
@@ -26,34 +34,56 @@ const TableEditorButtons: React.FC<Props> = ({
   isModified,
   onToggleWrapAll,
   wrapAllChecked,
-  onUndo,
-  onRedo,
+  jspInstance,
   canUndo,
   canRedo,
-  jspInstance,
+  onUndo,
+  onRedo,
 }) => {
+
   // jspreadsheetのUndoを直接呼び出す
   const handleJSPUndo = () => {
     if (jspInstance?.current && jspInstance.current[0]) {
-      jspInstance.current[0].undo();
+      const instance = jspInstance.current[0];
+      
+      if (typeof instance.undo === 'function') {
+        try {
+          instance.undo();
+          onUndo();
+        } catch (error) {
+          console.error("Undo error:", error);
+        }
+      }
     }
   };
 
   const handleJSPRedo = () => {
     if (jspInstance?.current && jspInstance.current[0]) {
-      jspInstance.current[0].redo();
+      const instance = jspInstance.current[0];
+      
+      if (typeof instance.redo === 'function') {
+        try {
+          instance.redo();
+          onRedo();
+        } catch (error) {
+          console.error("Redo error:", error);
+        }
+      }
     }
   };
-
+  
   return (
     <div className="tableEditorButtons">
       <button 
         onClick={handleJSPUndo} 
         title="元に戻す (Ctrl+Z)"
+        disabled={!canUndo}
+        style={{ backgroundColor: !canUndo ? '#ccc' : '' }}
       >↶ Undo</button>
       <button 
         onClick={handleJSPRedo} 
         title="やり直し (Ctrl+Y)"
+        disabled={!canRedo}
       >↷ Redo</button>
       <button onClick={onAddRow}>行を追加</button>
       <button onClick={onAddColumn}>列を追加</button>

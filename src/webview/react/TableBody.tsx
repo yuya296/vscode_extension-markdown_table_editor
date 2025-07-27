@@ -3,15 +3,22 @@ import { Spreadsheet, Worksheet } from "@jspreadsheet-ce/react";
 import { toMarkdownTable, Column, RowData } from "./utils/table";
 
 interface TableBodyProps {
+  // jspreadsheet
   jspInstance: React.RefObject<any>;
   tableData: string[][];
   colDefs: any[];
+  
+  // Table data
   columns: Column[];
   data: RowData[];
-  setIsModified: (v: boolean) => void;
-  onChange?: () => void;
-  pushToHistory?: (columns: Column[], data: RowData[]) => void;
+  
+  // State setters
+  setIsModified: (modified: boolean) => void;
   setMarkdown?: (markdown: string) => void;
+  
+  // Event callbacks
+  onChange?: () => void;
+  onHistoryChange?: () => void;
 }
 
 const TableBody: React.FC<TableBodyProps> = ({
@@ -22,8 +29,8 @@ const TableBody: React.FC<TableBodyProps> = ({
   data,
   setIsModified,
   onChange,
-  pushToHistory,
   setMarkdown,
+  onHistoryChange,
 }) => {
   return (
     <Spreadsheet ref={jspInstance}>
@@ -38,24 +45,14 @@ const TableBody: React.FC<TableBodyProps> = ({
         allowDeleteRow={true}
         allowDeleteColumn={true}
         toolbar={false}
+        allowUndo={true}
         onload={(instance: any) => {
-          // jspreadsheetのUndoを有効化（デフォルト）
+          // jspreadsheetのhistory機能を有効化
           if (instance && instance.options) {
             instance.options.allowUndo = true;
           }
-        }}
-        onbeforechange={(
-          _element: any,
-          _cell: HTMLTableCellElement,
-          _colIndex: string | number,
-          _rowIndex: string | number,
-          newValue: any
-        ) => {
-          // セル編集前に現在の状態を履歴に追加
-          if (pushToHistory) {
-            pushToHistory(columns, data);
-          }
-          return newValue;
+          
+          onHistoryChange && onHistoryChange();
         }}
         onchange={(_instance: any) => {
           setIsModified(true);
@@ -74,6 +71,8 @@ const TableBody: React.FC<TableBodyProps> = ({
             const newMarkdown = toMarkdownTable(columns, newData);
             setMarkdown(newMarkdown);
           }
+
+          onHistoryChange && onHistoryChange();
 
           if (window.vscode && typeof window.vscode.postMessage === "function") {
             window.vscode.postMessage({ type: "modified" });
