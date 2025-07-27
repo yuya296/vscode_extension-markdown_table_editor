@@ -1,4 +1,5 @@
 import React from "react";
+import { MdUndo, MdRedo } from "react-icons/md";
 
 interface TableEditorButtonsProps {
   // Table operations
@@ -79,12 +80,16 @@ const TableEditorButtons: React.FC<TableEditorButtonsProps> = ({
         title="元に戻す (Ctrl+Z)"
         disabled={!canUndo}
         style={{ backgroundColor: !canUndo ? '#ccc' : '' }}
-      >↶ Undo</button>
+      >
+        {React.createElement(MdUndo as any, { size: 16 })}
+      </button>
       <button 
         onClick={handleJSPRedo} 
         title="やり直し (Ctrl+Y)"
         disabled={!canRedo}
-      >↷ Redo</button>
+      >
+        {React.createElement(MdRedo as any, { size: 16 })}
+      </button>
       <button onClick={onAddRow}>行を追加</button>
       <button onClick={onAddColumn}>列を追加</button>
       <button onClick={onDeleteSelectedColumn}>選択列を削除</button>
