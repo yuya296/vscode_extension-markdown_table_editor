@@ -117,17 +117,29 @@ body, .tableEditor {
 }
 
 .tableEditorButtons button {
-  padding: 4px 12px;
+  padding: 6px 8px;
   border-radius: 4px;
-  border: 1px solid var(--vscode-button-border, #bbb);
-  background: var(--vscode-button-background, #fff);
-  color: var(--vscode-button-foreground, #000);
+  border: none;
+  background: transparent;
+  color: var(--vscode-editor-foreground, #ffffff);
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background-color 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .tableEditorButtons button:hover {
-  background: var(--vscode-button-hoverBackground, #e6f0ff);
+  background: var(--vscode-toolbar-hoverBackground, rgba(255, 255, 255, 0.1));
+}
+
+.tableEditorButtons button:disabled {
+  color: var(--vscode-disabledForeground, rgba(255, 255, 255, 0.4));
+  cursor: not-allowed;
+}
+
+.tableEditorButtons button:disabled:hover {
+  background: transparent;
 }
 .wrap-text-cell {
   white-space: pre-wrap !important;
