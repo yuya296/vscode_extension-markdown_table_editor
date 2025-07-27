@@ -17,10 +17,10 @@ import React, { useRef, useEffect, useState, useCallback } from "react";
 import "jspreadsheet-ce/dist/jspreadsheet.css";
 import TableEditorButtons from "./TableEditorButtons";
 import TableBody from "./TableBody";
-import { toMarkdownTable, RowData } from "./utils/table";
 import { useTableEditorHandlers } from "./hooks/useTableEditorHandlers";
 import { useTableData } from "./hooks/useTableData";
 import { useTableSave } from "./hooks/useTableSave";
+import { useSimpleUndoRedo } from "./hooks/useSimpleUndoRedo";
 import styles from "./TableEditor.module.scss";
 
 export const TableEditor: React.FC = () => {
@@ -28,7 +28,7 @@ export const TableEditor: React.FC = () => {
 
   const initialMarkdown = window.__INIT_MARKDOWN__ || "";
   const [markdown, setMarkdown] = useState<string>(initialMarkdown);
-  const [isModified, setIsModified] = useState(false);
+
 
   // markdownからcolumns/dataを生成
   const { columns, data } = useTableData(markdown);
@@ -51,67 +51,53 @@ export const TableEditor: React.FC = () => {
   // Markdown初期化
   useEffect(() => {
     setMarkdown(initialMarkdown);
-    setIsModified(false);
   }, [initialMarkdown]);
 
-  const { save, saveAndClose } = useTableSave({
-    columns,
-    data,
-    setIsModified,
-    jspInstance,
-  });
+  // Undo/Redo状態管理
+  const { canUndo, canRedo, onUndo, onRedo } = useSimpleUndoRedo();
+  
+  // 履歴状態の更新用（互換性のため保持）
+  const [historyUpdateTrigger, setHistoryUpdateTrigger] = useState(0);
+  const handleHistoryChange = () => setHistoryUpdateTrigger(prev => prev + 1);
 
-  // 保存処理
-  const handleSave = save;
-  // Save & Closeボタン処理
-  const handleSaveAndClose = saveAndClose;
-
-  // Cmd+S/Ctrl+S ショートカット対応
+  // キーボードショートカット
   useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "s") {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const isCmd = e.metaKey || e.ctrlKey;
+      
+      if (isCmd && e.key === "z" && !e.shiftKey) {
         e.preventDefault();
-        handleSave();
+        e.stopPropagation();
+        if (jspInstance?.current?.[0]) {
+          jspInstance.current[0].undo();
+          onUndo();
+          handleHistoryChange();
+        }
+      } else if (isCmd && (e.key === "y" || (e.key === "z" && e.shiftKey))) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (jspInstance?.current?.[0]) {
+          jspInstance.current[0].redo();
+          onRedo();
+          handleHistoryChange();
+        }
       }
     };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [handleSave]);
+    
+    document.addEventListener("keydown", handleKeyDown, true);
+    return () => document.removeEventListener("keydown", handleKeyDown, true);
+  }, [jspInstance, onUndo, onRedo, handleHistoryChange]);
 
-  // Markdown初期化
-  useEffect(() => {
-    setMarkdown(initialMarkdown);
-    setIsModified(false);
-  }, [initialMarkdown]);
-
-  // 行・列追加ハンドラ
-  const {
-    handleAddRow,
-    handleAddColumn,
-    handleDeleteSelectedColumn,
-    handleToggleWrapAll,
-    wrapAllChecked,
-  } = useTableEditorHandlers({
-    columnDefs: columns,
-    rowData: data,
-    setMarkdown,
-    setIsModified,
-    markdown,
-    jspInstance,
-  });
 
   return (
     <div>
       <div className={styles.tableEditor}>
         <TableEditorButtons
-          onAddRow={handleAddRow}
-          onAddColumn={handleAddColumn}
-          onDeleteSelectedColumn={handleDeleteSelectedColumn}
-          onSave={handleSave}
-          onSaveAndClose={handleSaveAndClose}
-          isModified={isModified}
-          wrapAllChecked={wrapAllChecked}
-          onToggleWrapAll={handleToggleWrapAll}
+          jspInstance={jspInstance}
+          canUndo={canUndo}
+          canRedo={canRedo}
+          onUndo={onUndo}
+          onRedo={onRedo}
         />
         <TableBody
           jspInstance={jspInstance}
@@ -119,7 +105,8 @@ export const TableEditor: React.FC = () => {
           colDefs={colDefs}
           columns={columns}
           data={data}
-          setIsModified={setIsModified}
+          setMarkdown={setMarkdown}
+          onHistoryChange={handleHistoryChange}
         />
       </div>
     </div>

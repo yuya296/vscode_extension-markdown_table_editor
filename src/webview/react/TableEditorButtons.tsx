@@ -1,43 +1,75 @@
 import React from "react";
+import { MdUndo, MdRedo } from "react-icons/md";
 
+interface TableEditorButtonsProps {
+  // Undo/Redo
+  canUndo: boolean;
+  canRedo: boolean;
+  onUndo: () => void;
+  onRedo: () => void;
+  
+  // jspreadsheet instance
+  jspInstance?: React.RefObject<any>;
+}
 
-type Props = {
-  onAddRow: () => void;
-  onAddColumn: () => void;
-  onDeleteSelectedColumn: () => void;
-  onSave: () => void;
-  onSaveAndClose: () => void;
-  isModified: boolean;
-  onToggleWrapAll: () => void;
-  wrapAllChecked: boolean;
+const TableEditorButtons: React.FC<TableEditorButtonsProps> = ({
+  jspInstance,
+  canUndo,
+  canRedo,
+  onUndo,
+  onRedo,
+}) => {
+
+  // jspreadsheetのUndoを直接呼び出す
+  const handleJSPUndo = () => {
+    if (jspInstance?.current && jspInstance.current[0]) {
+      const instance = jspInstance.current[0];
+      
+      if (typeof instance.undo === 'function') {
+        try {
+          instance.undo();
+          onUndo();
+        } catch (error) {
+          console.error("Undo error:", error);
+        }
+      }
+    }
+  };
+
+  const handleJSPRedo = () => {
+    if (jspInstance?.current && jspInstance.current[0]) {
+      const instance = jspInstance.current[0];
+      
+      if (typeof instance.redo === 'function') {
+        try {
+          instance.redo();
+          onRedo();
+        } catch (error) {
+          console.error("Redo error:", error);
+        }
+      }
+    }
+  };
+  
+  return (
+    <div className="tableEditorButtons">
+      <button 
+        onClick={handleJSPUndo} 
+        title="元に戻す (Ctrl+Z)"
+        disabled={!canUndo}
+        style={{ backgroundColor: !canUndo ? '#ccc' : '' }}
+      >
+        {React.createElement(MdUndo as any, { size: 16 })}
+      </button>
+      <button 
+        onClick={handleJSPRedo} 
+        title="やり直し (Ctrl+Y)"
+        disabled={!canRedo}
+      >
+        {React.createElement(MdRedo as any, { size: 16 })}
+      </button>
+    </div>
+  );
 };
-
-const TableEditorButtons: React.FC<Props> = ({
-  onAddRow,
-  onAddColumn,
-  onDeleteSelectedColumn,
-  onSave,
-  onSaveAndClose,
-  isModified,
-  onToggleWrapAll,
-  wrapAllChecked,
-}) => (
-  <div className="tableEditorButtons">
-    <button onClick={onAddRow}>行を追加</button>
-    <button onClick={onAddColumn}>列を追加</button>
-    <button onClick={onDeleteSelectedColumn}>選択列を削除</button>
-    <button onClick={onSave} disabled={!isModified}>Save</button>
-    <button onClick={onSaveAndClose} disabled={!isModified}>Save & Close</button>
-    <label style={{ userSelect: "none", marginLeft: 8 }}>
-      <input
-        type="checkbox"
-        checked={wrapAllChecked}
-        onChange={onToggleWrapAll}
-        style={{ marginRight: 4 }}
-      />
-      全列 wrap
-    </label>
-  </div>
-);
 
 export default TableEditorButtons;
